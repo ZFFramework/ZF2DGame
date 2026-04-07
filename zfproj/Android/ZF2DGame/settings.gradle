@@ -1,0 +1,29 @@
+pluginManagement {
+    repositories {
+        google {
+            content {
+                includeGroupByRegex("com\\.android.*")
+                includeGroupByRegex("com\\.google.*")
+                includeGroupByRegex("androidx.*")
+            }
+        }
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+dependencyResolutionManagement {
+    // repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.name = 'ZF2DGame'
+include ':zflib'
+
+if (file('./zflib/zfprojConfig/zfprojConfig.xml').exists()) {
+    include ':zfprojConfig_ZF2DGame'
+    project(':zfprojConfig_ZF2DGame').projectDir = file('./zfprojConfigHelper')
+}
+

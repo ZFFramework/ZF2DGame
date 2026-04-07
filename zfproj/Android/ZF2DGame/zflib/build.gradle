@@ -1,0 +1,95 @@
+plugins {
+    alias(libs.plugins.android.library)
+}
+
+def ZF_ROOT_PATH = file(this.projectDir.absolutePath + '/../../../../../../../ZFFramework').absolutePath
+android {
+    namespace 'com.ZFFramework.ZF2DGame'
+    compileSdk 35
+
+    defaultConfig {
+        minSdk 21
+
+        externalNativeBuild {
+            cmake {
+                cppFlags ''
+            }
+        }
+        ndk {
+            if (System.getenv('ZF_ANDROID_ABI') != null && !System.getenv('ZF_ANDROID_ABI').isEmpty()) {
+                // ZF_ANDROID_ABI=armeabi-v7a,arm64-v8a,x86 ./gradle assembleRelease
+                abiFilters System.getenv('ZF_ANDROID_ABI').split(',')
+            } else {
+                // abiFilters 'arm64-v8a', 'armeabi', 'armeabi-v7a', 'mips', 'mips64', 'x86', 'x86_64'
+                abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86'
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+    sourceSets {
+        main {
+            java.srcDirs += this.projectDir.absolutePath + '/../../../../zfsrc/ZFImpl/sys_Android/java'
+        }
+    }
+    externalNativeBuild {
+        cmake {
+            path 'CMakeLists.txt'
+        }
+    }
+}
+
+dependencies {
+    implementation fileTree(includes: ['*.jar'], dir: 'libs')
+    if (file(this.projectDir.absolutePath + '/zfprojConfig/zfprojConfig.xml').exists()) {
+        implementation project(':zfprojConfig_ZF2DGame')
+    }
+    compileOnly fileTree(includes: ['*.jar'], dir: ZF_ROOT_PATH + '/_release/Android/module/ZFCore/src/main/libs')
+    compileOnly fileTree(includes: ['*.jar'], dir: ZF_ROOT_PATH + '/_release/Android/module/ZFUtility/src/main/libs')
+    compileOnly fileTree(includes: ['*.jar'], dir: ZF_ROOT_PATH + '/_release/Android/module/ZFAlgorithm/src/main/libs')
+    compileOnly fileTree(includes: ['*.jar'], dir: ZF_ROOT_PATH + '/_release/Android/module/ZFUIKit/src/main/libs')
+    compileOnly fileTree(includes: ['*.jar'], dir: ZF_ROOT_PATH + '/_release/Android/module/ZFUIWidget/src/main/libs')
+}
+
+if (file(this.projectDir.absolutePath + '/zfprojConfig/zfprojConfig.gradle').exists()) {
+    apply from: this.projectDir.absolutePath + '/zfprojConfig/zfprojConfig.gradle'
+}
+
+import org.gradle.internal.os.OperatingSystem
+
+def ZFCmd(cmd, args) {
+    if (OperatingSystem.current().isWindows()) {
+        return ['cmd.exe', '/c', file("${cmd}.bat").absolutePath] + args
+    } else {
+        return ['sh', file("${cmd}.sh").absolutePath] + args
+    }
+}
+
+tasks.register('ZFCopyRes_ZF2DGame', Exec) {
+    commandLine ZFCmd(ZF_ROOT_PATH + '/tools/util/copy_res', [
+            file(this.projectDir.absolutePath + '/../../../../zfres').absolutePath,
+            file(this.projectDir.absolutePath + '/src/main/assets/zfres').absolutePath,
+    ])
+}
+tasks.matching { it.name.startsWith('pre') && it.name.endsWith('Build') }.configureEach {
+    dependsOn('ZFCopyRes_ZF2DGame')
+}
+
+tasks.register('ZFCopyLib_ZF2DGame', Exec) {
+    commandLine ZFCmd(ZF_ROOT_PATH + '/tools/spec/Android/libs_copy', [
+            'ZF2DGame',
+            file(this.projectDir.absolutePath + '/..').absolutePath,
+    ])
+}
+tasks.matching { it.name.startsWith('assemble') }.configureEach {
+    finalizedBy('ZFCopyLib_ZF2DGame')
+}
+
