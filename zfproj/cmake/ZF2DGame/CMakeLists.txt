@@ -6,11 +6,12 @@ add_compile_options("$<$<CONFIG:DEBUG>:-DDEBUG>")
 
 include("${PROJECT_SOURCE_DIR}/zfprojConfig.cmake" OPTIONAL)
 
-file(GLOB_RECURSE ZF_SRC_FILES RELATIVE "${PROJECT_SOURCE_DIR}"
-    "${PROJECT_SOURCE_DIR}/../../../zfsrc/*.c"
-    "${PROJECT_SOURCE_DIR}/../../../zfsrc/*.cpp"
-    "${PROJECT_SOURCE_DIR}/../../../zfsrc_ext/*.c"
-    "${PROJECT_SOURCE_DIR}/../../../zfsrc_ext/*.cpp"
+zfprojSrcFiles(
+    ZF_SRC_FILES
+    "${CMAKE_BINARY_DIR}/zfgensrc_ZF2DGame.cpp"
+    "${ZF_ROOT_PATH}"
+    "${PROJECT_SOURCE_DIR}"
+    "${PROJECT_SOURCE_DIR}/../../.."
     )
 if(COMMAND zfprojConfigBefore_ZF2DGame)
     zfprojConfigBefore_ZF2DGame(ZF2DGame ZF_SRC_FILES)
@@ -27,7 +28,6 @@ target_include_directories(ZF2DGame PRIVATE "${PROJECT_SOURCE_DIR}/../../../zfsr
 
 function(ZFAddLib ZF_LIB_NAME_)
     target_include_directories(ZF2DGame PRIVATE "${ZF_ROOT_PATH}/_release/cmake/all/include")
-
     target_link_directories(ZF2DGame PUBLIC "${ZF_ROOT_PATH}/_release/cmake/module/${ZF_LIB_NAME_}/lib")
     target_link_libraries(ZF2DGame PRIVATE ${ZF_LIB_NAME_})
 endfunction()
@@ -49,11 +49,11 @@ install(
     TARGETS ZF2DGame
     DESTINATION "${ZF_ROOT_PATH}/_release/cmake/module/ZF2DGame/lib"
     )
-if(WIN32)
-    execute_process(COMMAND "${ZF_ROOT_PATH}\\tools\\util\\copy_res.bat" "${PROJECT_SOURCE_DIR}\\..\\..\\..\\zfres\\" "${ZF_ROOT_PATH}\\_release\\cmake\\module\\ZF2DGame\\zfres")
-else()
-    execute_process(COMMAND sh "${ZF_ROOT_PATH}/tools/util/copy_res.sh" "${PROJECT_SOURCE_DIR}/../../../zfres/" "${ZF_ROOT_PATH}/_release/cmake/module/ZF2DGame/zfres")
-endif()
+install(
+    DIRECTORY "${PROJECT_SOURCE_DIR}/../../../zfres/"
+    DESTINATION "${ZF_ROOT_PATH}/_release/cmake/module/ZF2DGame/zfres"
+    PATTERN "ZF_PUT_RES_FILES_HERE" EXCLUDE
+    )
 
 install(
     DIRECTORY "${ZF_ROOT_PATH}/_release/cmake/module/ZF2DGame/"
