@@ -3,12 +3,12 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		053692DDAE39E8EF679FD77E7752D171 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 90135995939004FBCBD435ACC2CFDFD4 /* Foundation.framework */; };
-		6E6434ED6362FA566A895DF73C07424E /* Pods_ZF2DGame.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B77F98CA1CC8CB0CA96A2FB3B2C3073A /* Pods_ZF2DGame.framework */; };
+		0F3707FBFD241EE2981208C92071E357 /* ZF2DGame_zfprojConfig.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E06AE40EF734153C349D3E6F10BBA2A7 /* ZF2DGame_zfprojConfig.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		84D254C9C78ACA05877627A2BBFC9C52 /* zfgensrc_ZF2DGame.mm in Sources */ = {isa = PBXBuildFile; fileRef = 6BE6648F83B575ECC2F1FF22A2122010 /* zfgensrc_ZF2DGame.mm */; };
 /* End PBXBuildFile section */
 
@@ -28,11 +28,13 @@
 		6BE6648F83B575ECC2F1FF22A2122010 /* zfgensrc_ZF2DGame.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = zfgensrc_ZF2DGame.mm; sourceTree = "<group>"; };
 		90135995939004FBCBD435ACC2CFDFD4 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		AC38BB5C7A4A7290F0300066FCF05545 /* libZF2DGame.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libZF2DGame.a; sourceTree = BUILT_PRODUCTS_DIR; };
-		B77F98CA1CC8CB0CA96A2FB3B2C3073A /* Pods_ZF2DGame.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_ZF2DGame.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		B9B3CCE9ECA42DF979F799946A0BE69B /* Pods-ZF2DGame.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ZF2DGame.release.xcconfig"; path = "Target Support Files/Pods-ZF2DGame/Pods-ZF2DGame.release.xcconfig"; sourceTree = "<group>"; };
-		D97FF5EE1942FCC31FCC63E95F494449 /* Pods-ZF2DGame.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ZF2DGame.debug.xcconfig"; path = "Target Support Files/Pods-ZF2DGame/Pods-ZF2DGame.debug.xcconfig"; sourceTree = "<group>"; };
+		E06AE40EF734153C349D3E6F10BBA2A7 /* ZF2DGame_zfprojConfig.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ZF2DGame_zfprojConfig.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		FA220DEA08D07730D9D4E37AC5914922 /* zfsrc */ = {isa = PBXFileReference; lastKnownFileType = folder; name = zfsrc; path = ../../../zfsrc; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		D7166C6F243FC6F3F9CFA92E2BC0AC39 /* zfsrc_ext */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); name = zfsrc_ext; path = ../../../zfsrc_ext; sourceTree = SOURCE_ROOT; };
+/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		7346E7C3027E6E02E6465BA9CC84EF74 /* Frameworks */ = {
@@ -40,39 +42,20 @@
 			buildActionMask = 2147483647;
 			files = (
 				053692DDAE39E8EF679FD77E7752D171 /* Foundation.framework in Frameworks */,
-				6E6434ED6362FA566A895DF73C07424E /* Pods_ZF2DGame.framework in Frameworks */,
+				0F3707FBFD241EE2981208C92071E357 /* ZF2DGame_zfprojConfig.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		351309B9B694C36206003AA6F10D4474 = {
+		B0AD11D6FA8E0E247C07EFC3F3D5A64C /* ZF2DGame */ = {
 			isa = PBXGroup;
 			children = (
-				616B91549D217173C61C26A44557E7C1 /* Frameworks */,
-				FC1C367A814D8BFA0FF19E87A0C8FE95 /* Pods */,
-				9AC85D5896D896ADEB61DF087F81BD50 /* Products */,
-				A7AC7C6A3766BC0F974F243354ACE0DA /* ProjectFiles */,
-				B0AD11D6FA8E0E247C07EFC3F3D5A64C /* ZF2DGame */,
+				FA220DEA08D07730D9D4E37AC5914922 /* zfsrc */,
+				D7166C6F243FC6F3F9CFA92E2BC0AC39 /* zfsrc_ext */,
 			);
-			sourceTree = "<group>";
-		};
-		616B91549D217173C61C26A44557E7C1 /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-				90135995939004FBCBD435ACC2CFDFD4 /* Foundation.framework */,
-				B77F98CA1CC8CB0CA96A2FB3B2C3073A /* Pods_ZF2DGame.framework */,
-			);
-			name = Frameworks;
-			sourceTree = "<group>";
-		};
-		9AC85D5896D896ADEB61DF087F81BD50 /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				AC38BB5C7A4A7290F0300066FCF05545 /* libZF2DGame.a */,
-			);
-			name = Products;
+			name = ZF2DGame;
 			sourceTree = "<group>";
 		};
 		A7AC7C6A3766BC0F974F243354ACE0DA /* ProjectFiles */ = {
@@ -83,21 +66,31 @@
 			path = ProjectFiles;
 			sourceTree = "<group>";
 		};
-		B0AD11D6FA8E0E247C07EFC3F3D5A64C /* ZF2DGame */ = {
+		9AC85D5896D896ADEB61DF087F81BD50 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				FA220DEA08D07730D9D4E37AC5914922 /* zfsrc */,
+				AC38BB5C7A4A7290F0300066FCF05545 /* libZF2DGame.a */,
 			);
-			name = ZF2DGame;
+			name = Products;
 			sourceTree = "<group>";
 		};
-		FC1C367A814D8BFA0FF19E87A0C8FE95 /* Pods */ = {
+		616B91549D217173C61C26A44557E7C1 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				D97FF5EE1942FCC31FCC63E95F494449 /* Pods-ZF2DGame.debug.xcconfig */,
-				B9B3CCE9ECA42DF979F799946A0BE69B /* Pods-ZF2DGame.release.xcconfig */,
+				90135995939004FBCBD435ACC2CFDFD4 /* Foundation.framework */,
+				E06AE40EF734153C349D3E6F10BBA2A7 /* ZF2DGame_zfprojConfig.framework */,
 			);
-			path = Pods;
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		351309B9B694C36206003AA6F10D4474 = {
+			isa = PBXGroup;
+			children = (
+				616B91549D217173C61C26A44557E7C1 /* Frameworks */,
+				9AC85D5896D896ADEB61DF087F81BD50 /* Products */,
+				A7AC7C6A3766BC0F974F243354ACE0DA /* ProjectFiles */,
+				B0AD11D6FA8E0E247C07EFC3F3D5A64C /* ZF2DGame */,
+			);
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -107,16 +100,18 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 9771D3AD6EAC09AF851DE11719DC7584 /* Build configuration list for PBXNativeTarget "ZF2DGame" */;
 			buildPhases = (
-				4D3B3674E93C7C6D9F59A9D8CECE5ABF /* [CP] Check Pods Manifest.lock */,
-				BBCB1C66CE35D77CB4683ECCB5334C19 /* ZFCompileSource */,
+				5C10EBC49472CDE6331F8D23BC21351D /* ZFCompileSource */,
 				CFB4F27A15228AFDAEBA69C3829F4754 /* Sources */,
 				7346E7C3027E6E02E6465BA9CC84EF74 /* Frameworks */,
 				0BF289E52A35365F011285E3367853CF /* CopyFiles */,
-				E31C3E9F0506E6719D6B6F101A4155F4 /* ZFUniqueProj */,
+				9ED959CBB6936D45D6D924452474C08B /* ZFUniqueProj */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				D7166C6F243FC6F3F9CFA92E2BC0AC39 /* zfsrc_ext */,
 			);
 			name = ZF2DGame;
 			productName = ZF2DGame;
@@ -158,29 +153,7 @@
 /* End PBXProject section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		4D3B3674E93C7C6D9F59A9D8CECE5ABF /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
-				"${PODS_ROOT}/Manifest.lock",
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-ZF2DGame-checkManifestLockResult.txt",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-		BBCB1C66CE35D77CB4683ECCB5334C19 /* ZFCompileSource */ = {
+		5C10EBC49472CDE6331F8D23BC21351D /* ZFCompileSource */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -194,9 +167,9 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "sh ${SRCROOT}/../../../../../../ZFFramework/tools/common/unity_build.sh \"${SRCROOT}/ProjectFiles/zfgensrc_ZF2DGame.mm\" \"${SRCROOT}/../../../zfsrc\"";
+			shellScript = "sh \"${SRCROOT}/../../../../../../ZFFramework/tools/common/unity_build.sh\" \"${SRCROOT}/ProjectFiles/zfgensrc_ZF2DGame.mm\" \"${SRCROOT}/../../../zfsrc\"";
 		};
-		E31C3E9F0506E6719D6B6F101A4155F4 /* ZFUniqueProj */ = {
+		9ED959CBB6936D45D6D924452474C08B /* ZFUniqueProj */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -209,7 +182,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "sh ${SRCROOT}/../../../../../../ZFFramework/tools/spec/iOS/unique_proj.sh \"${SRCROOT}/${PROJECT_NAME}.xcodeproj\"\n";
+			shellScript = "sh \"${SRCROOT}/../../../../../../ZFFramework/tools/spec/iOS/unique_proj.sh\" \"${SRCROOT}/${PROJECT_NAME}.xcodeproj\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -225,59 +198,34 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		436B8BC953EDD7B938EECBF95CBD580D /* Release */ = {
+		CE9365270E89A3E1A1C1257E76D85632 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_COMMA = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
-				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
-				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
-				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
-				CLANG_WARN_STRICT_PROTOTYPES = YES;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
-				COPY_PHASE_STRIP = NO;
+				CODE_SIGN_STYLE = Automatic;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
-				MTL_ENABLE_DEBUG_INFO = NO;
-				SDKROOT = iphoneos;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				VALIDATE_PRODUCT = YES;
+				ENABLE_BITCODE = NO;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = YES;
+				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
+				MACH_O_TYPE = staticlib;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-Objc",
+					"-all_load",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				USER_HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"${SRCROOT}/../../../zfsrc",
+					"${SRCROOT}/../../../../../../ZFFramework/_release/iOS/all/include",
+				);
+				WARNING_CFLAGS = "-Wpartial-availability";
 			};
-			name = Release;
+			name = Debug;
 		};
 		449CCA25631C376AE8415BBE638AB6CE /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = B9B3CCE9ECA42DF979F799946A0BE69B /* Pods-ZF2DGame.release.xcconfig */;
 			buildSettings = {
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CODE_SIGN_STYLE = Automatic;
@@ -358,50 +306,73 @@
 			};
 			name = Debug;
 		};
-		CE9365270E89A3E1A1C1257E76D85632 /* Debug */ = {
+		436B8BC953EDD7B938EECBF95CBD580D /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D97FF5EE1942FCC31FCC63E95F494449 /* Pods-ZF2DGame.debug.xcconfig */;
 			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
-				CODE_SIGN_STYLE = Automatic;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				ENABLE_BITCODE = NO;
-				GCC_INLINES_ARE_PRIVATE_EXTERN = YES;
-				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
-				MACH_O_TYPE = staticlib;
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-Objc",
-					"-all_load",
-				);
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				USER_HEADER_SEARCH_PATHS = (
-					"$(inherited)",
-					"${SRCROOT}/../../../zfsrc",
-					"${SRCROOT}/../../../../../../ZFFramework/_release/iOS/all/include",
-				);
-				WARNING_CFLAGS = "-Wpartial-availability";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				VALIDATE_PRODUCT = YES;
 			};
-			name = Debug;
+			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		7308CCF6616C10DDBB019FF119389D2A /* Build configuration list for PBXProject "ZF2DGame" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				B7995E15743A003A3D0ACD587CBE718A /* Debug */,
-				436B8BC953EDD7B938EECBF95CBD580D /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		9771D3AD6EAC09AF851DE11719DC7584 /* Build configuration list for PBXNativeTarget "ZF2DGame" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				CE9365270E89A3E1A1C1257E76D85632 /* Debug */,
 				449CCA25631C376AE8415BBE638AB6CE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7308CCF6616C10DDBB019FF119389D2A /* Build configuration list for PBXProject "ZF2DGame" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B7995E15743A003A3D0ACD587CBE718A /* Debug */,
+				436B8BC953EDD7B938EECBF95CBD580D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
