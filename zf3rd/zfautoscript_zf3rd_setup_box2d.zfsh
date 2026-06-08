@@ -1,0 +1,4 @@
+<ZF_SH> "<ZF_ROOT_PATH>\tools\common\git_check.<ZF_SH_EXT>" "https://github.com/erincatto/box2d" v3.1.1 "<ZF_WORK_DIR>\_repo\box2d"
+<ZF_SH> "<ZF_ROOT_PATH>\tools\common\copy_check.<ZF_SH_EXT>" "<ZF_WORK_DIR>\_repo\box2d\include\box2d" "<ZF_WORK_DIR>\..\zfsrc_ext\ZFImpl\_repo\box2d\box2d"
+<ZF_SH> "<ZF_ROOT_PATH>\tools\common\copy_check.<ZF_SH_EXT>" "<ZF_WORK_DIR>\_repo\box2d\src" "<ZF_WORK_DIR>\..\zfsrc_ext\ZFImpl\_repo\box2d"
+
