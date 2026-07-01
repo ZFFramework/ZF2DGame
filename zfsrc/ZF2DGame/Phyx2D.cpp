@@ -119,7 +119,7 @@ zfclassNotPOD _ZFP_P2BodyPrivate {
 public:
     b2BodyId implBodyId;
     P2Unit *ownerUnit;
-    zfstlhashmap<P2Joint *, zfbool> bodyRefJointList;
+    zfimplhashmap<P2Joint *, zfbool> bodyRefJointList;
     zfbool massNeedUpdate;
 public:
     _ZFP_P2BodyPrivate(void)
@@ -147,7 +147,7 @@ public:
 zfclassNotPOD _ZFP_P2UnitPrivate {
 public:
     P2World *ownerWorld;
-    zfstlhashmap<P2Joint *, zfbool> unitRefJointList;
+    zfimplhashmap<P2Joint *, zfbool> unitRefJointList;
 public:
     _ZFP_P2UnitPrivate(void)
     : ownerWorld(zfnull)
@@ -159,13 +159,13 @@ zfclassNotPOD _ZFP_P2WorldPrivate {
 public:
     b2WorldId implWorldId;
     ZFListener implTimer;
-    zfstlhashmap<zfstring, P2Body *> bodyIdMap; // cache for finding
-    zfstlhashmap<P2Body *, zfbool> pendingBody; // bodies needs to create or update mass
-    zfstlhashmap<P2Joint *, zfbool> pendingJoint; // joints needs to create or update body
+    zfimplhashmap<zfstring, P2Body *> bodyIdMap; // cache for finding
+    zfimplhashmap<P2Body *, zfbool> pendingBody; // bodies needs to create or update mass
+    zfimplhashmap<P2Joint *, zfbool> pendingJoint; // joints needs to create or update body
     P2BodyMoveEvent *bodyMoveEvent;
     P2ContactEvent *contactEvent;
     P2SensorEvent *sensorEvent;
-    zfstlhashmap<P2Unit *, zfbool> visibleUnits;
+    zfimplhashmap<P2Unit *, zfbool> visibleUnits;
     ZFUIRect visibleArea;
 public:
     _ZFP_P2WorldPrivate(void)
@@ -1269,7 +1269,7 @@ ZFMETHOD_DEFINE_1(P2Body, P2Joint *, p2_jointFind
         , ZFMP_IN(const zfstring &, jointId)
         ) {
     if(jointId) {
-        for(zfstlhashmap<P2Joint *, zfbool>::iterator it = _ZFP_P2Body_d->bodyRefJointList.begin(); it != _ZFP_P2Body_d->bodyRefJointList.end(); ++it) {
+        for(zfimplhashmap<P2Joint *, zfbool>::iterator it = _ZFP_P2Body_d->bodyRefJointList.begin(); it != _ZFP_P2Body_d->bodyRefJointList.end(); ++it) {
             P2Joint *item = it->first;
             if(item->p2_jointId() == jointId) {
                 return item;
@@ -1281,7 +1281,7 @@ ZFMETHOD_DEFINE_1(P2Body, P2Joint *, p2_jointFind
 
 ZFMETHOD_DEFINE_0(P2Body, zfautoT<ZFContainer>, p2_refJointList) {
     zfobj<ZFHashSet> ret;
-    for(zfstlhashmap<P2Joint *, zfbool>::iterator it = _ZFP_P2Body_d->bodyRefJointList.begin(); it != _ZFP_P2Body_d->bodyRefJointList.end(); ++it) {
+    for(zfimplhashmap<P2Joint *, zfbool>::iterator it = _ZFP_P2Body_d->bodyRefJointList.begin(); it != _ZFP_P2Body_d->bodyRefJointList.end(); ++it) {
         ret->add(it->first);
     }
     return ret;
@@ -1693,7 +1693,7 @@ ZFMETHOD_DEFINE_1(P2Unit, P2Joint *, p2_jointFind
                 return joint;
             }
         }
-        for(zfstlhashmap<P2Joint *, zfbool>::iterator it = _ZFP_P2Unit_d->unitRefJointList.begin(); it != _ZFP_P2Unit_d->unitRefJointList.end(); ++it) {
+        for(zfimplhashmap<P2Joint *, zfbool>::iterator it = _ZFP_P2Unit_d->unitRefJointList.begin(); it != _ZFP_P2Unit_d->unitRefJointList.end(); ++it) {
             P2Joint *joint = it->first;
             if(joint->p2_jointId() == jointId) {
                 return joint;
@@ -1705,7 +1705,7 @@ ZFMETHOD_DEFINE_1(P2Unit, P2Joint *, p2_jointFind
 
 ZFMETHOD_DEFINE_0(P2Unit, zfautoT<ZFContainer>, p2_refJointList) {
     zfobj<ZFHashSet> ret;
-    for(zfstlhashmap<P2Joint *, zfbool>::iterator it = _ZFP_P2Unit_d->unitRefJointList.begin(); it != _ZFP_P2Unit_d->unitRefJointList.end(); ++it) {
+    for(zfimplhashmap<P2Joint *, zfbool>::iterator it = _ZFP_P2Unit_d->unitRefJointList.begin(); it != _ZFP_P2Unit_d->unitRefJointList.end(); ++it) {
         ret->add(it->first);
     }
     return ret;
@@ -1930,7 +1930,7 @@ ZFMETHOD_DEFINE_1(P2World, P2Body *, p2_bodyFind
         , ZFMP_IN(const zfstring &, bodyId)
         ) {
     if(bodyId) {
-        zfstlhashmap<zfstring, P2Body *>::iterator it = _ZFP_P2World_d->bodyIdMap.find(bodyId);
+        zfimplhashmap<zfstring, P2Body *>::iterator it = _ZFP_P2World_d->bodyIdMap.find(bodyId);
         if(it != _ZFP_P2World_d->bodyIdMap.end()) {
             return it->second;
         }
@@ -2178,8 +2178,8 @@ static void _ZFP_P2BodyDetach(ZF_IN P2Body *body) {
                     .param0(body)
                     );
 
-            zfstlhashmap<P2Joint *, zfbool> &bodyRefJointList = body->_ZFP_P2Body_d->bodyRefJointList;
-            for(zfstlhashmap<P2Joint *, zfbool>::iterator it = bodyRefJointList.begin(); it != bodyRefJointList.end(); ++it) {
+            zfimplhashmap<P2Joint *, zfbool> &bodyRefJointList = body->_ZFP_P2Body_d->bodyRefJointList;
+            for(zfimplhashmap<P2Joint *, zfbool>::iterator it = bodyRefJointList.begin(); it != bodyRefJointList.end(); ++it) {
                 P2Joint *joint = it->first;
                 ownerWorld->_ZFP_P2World_d->pendingJoint.erase(joint);
 
@@ -2280,8 +2280,8 @@ static void _ZFP_P2BodyImplCreate(ZF_IN P2World *world, ZF_IN P2Body *body) {
     }
 }
 static void _ZFP_P2WorldImplStep_pendingBody(ZF_IN P2World *world) {
-    zfstlhashmap<P2Body *, zfbool> &pendingBody = world->_ZFP_P2World_d->pendingBody;
-    for(zfstlhashmap<P2Body *, zfbool>::iterator it = pendingBody.begin(); it != pendingBody.end(); ++it) {
+    zfimplhashmap<P2Body *, zfbool> &pendingBody = world->_ZFP_P2World_d->pendingBody;
+    for(zfimplhashmap<P2Body *, zfbool>::iterator it = pendingBody.begin(); it != pendingBody.end(); ++it) {
         P2Body *body = it->first;
         if(B2_IS_NULL(body->_ZFP_P2Body_d->implBodyId)) {
             _ZFP_P2BodyImplCreate(world, body);
@@ -2290,8 +2290,8 @@ static void _ZFP_P2WorldImplStep_pendingBody(ZF_IN P2World *world) {
     }
 }
 static void _ZFP_P2WorldImplStep_pendingJoint(ZF_IN P2World *world) {
-    zfstlhashmap<P2Joint *, zfbool> &pendingJoint = world->_ZFP_P2World_d->pendingJoint;
-    for(zfstlhashmap<P2Joint *, zfbool>::iterator it = pendingJoint.begin(); it != pendingJoint.end(); ++it) {
+    zfimplhashmap<P2Joint *, zfbool> &pendingJoint = world->_ZFP_P2World_d->pendingJoint;
+    for(zfimplhashmap<P2Joint *, zfbool>::iterator it = pendingJoint.begin(); it != pendingJoint.end(); ++it) {
         P2Joint *joint = it->first;
         if(!joint->p2_bodyId0()) {
             ZFLogTrim("P2Joint: p2_bodyId0 not set, joint: %s", joint);
