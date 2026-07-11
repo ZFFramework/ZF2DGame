@@ -40,6 +40,8 @@ public:
     ZFMETHOD_DECLARE_0(P2Unit *, p2_ownerUnit)
     /** @brief see #P2World */
     ZFMETHOD_DECLARE_0(P2World *, p2_ownerWorld)
+    /** @brief see #P2World */
+    ZFMETHOD_DECLARE_0(void, p2_shapeRemoveLater)
 
 public:
     /** @brief see #P2World */
@@ -50,11 +52,11 @@ public:
     /** @brief see #P2World */
     ZFPROPERTY_ASSIGN(zfbool, p2_sensor)
     /** @brief see #P2World */
-    ZFPROPERTY_ASSIGN(zfbool, p2_contactEnable)
-    ZFPROPERTY_ON_UPDATE_DECLARE(zfbool, p2_contactEnable)
-    /** @brief see #P2World */
     ZFPROPERTY_ASSIGN(zfbool, p2_sensorEnable)
     ZFPROPERTY_ON_UPDATE_DECLARE(zfbool, p2_sensorEnable)
+    /** @brief see #P2World */
+    ZFPROPERTY_ASSIGN(zfbool, p2_contactEnable)
+    ZFPROPERTY_ON_UPDATE_DECLARE(zfbool, p2_contactEnable)
 
     /** @brief see #P2World, what category this shape is */
     ZFPROPERTY_ASSIGN(zfflags, p2_filterCategory, P2FilterCategoryDefault())
@@ -183,6 +185,8 @@ public:
     ZFMETHOD_DECLARE_0(P2Body *, p2_ownerBody1)
     /** @brief see #P2World */
     ZFMETHOD_DECLARE_0(P2World *, p2_ownerWorld)
+    /** @brief see #P2World */
+    ZFMETHOD_DECLARE_0(void, p2_jointRemoveLater)
 
 public:
     /** @brief see #P2World */
@@ -197,6 +201,12 @@ public:
     ZFPROPERTY_ASSIGN(zfbool, p2_collideEnable)
     ZFPROPERTY_ON_UPDATE_DECLARE(zfbool, p2_collideEnable)
 
+protected:
+    /** @brief init with body id */
+    ZFOBJECT_ON_INIT_DECLARE_2(
+            ZFMP_IN(const zfstring &, bodyId0)
+            , ZFMP_IN(const zfstring &, bodyId1)
+            )
 protected:
     /** @brief for impl only */
     virtual inline void p2impl_jointCreate(ZF_IN P2Body *ownerBody0, ZF_IN P2Body *ownerBody1) {}
@@ -464,6 +474,22 @@ public:
     ZFMETHOD_DECLARE_0(P2Unit *, p2_ownerUnit)
     /** @brief see #P2World */
     ZFMETHOD_DECLARE_0(P2World *, p2_ownerWorld)
+    /**
+     * @brief remove this body after current simulation step,
+     *   if this body is the main #P2Unit::p2_body of an unit,
+     *   then the entire unit would be removed instead
+     *
+     * shape/body/unit may be removed during simulation step
+     * (during callback of app code, #P2World::p2impl_contactEvent for example),
+     * causing #P2SensorEventData or #P2ContactEventData's shape to be null,
+     * which is not expected\n
+     * to make things easier,
+     * you may use this method to remove things (instead of #P2World::p2_unitRemove),
+     * so that they would be removed after your logical code
+     */
+    ZFMETHOD_DECLARE_0(void, p2_bodyRemoveLater)
+    /** @brief see #P2World */
+    ZFMETHOD_DECLARE_0(void, p2_unitRemoveLater)
 
     /** @brief see #P2World */
     ZFPROPERTY_RETAIN_READONLY(ZFArray *, p2_shapeList, zfobj<ZFArray>())
@@ -552,8 +578,10 @@ public:
     ZFPROPERTY_ON_UPDATE_DECLARE(zffloat, p2_rotationDamping)
 
 public:
-    /** @brief see #P2World */
+    /** @brief see #P2World, note: calculate each time called */
     ZFMETHOD_DECLARE_0(ZFUIRect, p2_AABB)
+    /** @brief get all child shape's bounding size, calculate and cached automatically */
+    ZFMETHOD_DECLARE_0(ZFUISize, p2_bodySize)
 
     /** @brief see #P2World */
     ZFMETHOD_DECLARE_0(zffloat, p2_mass)
@@ -644,8 +672,67 @@ zfclass ZFLIB_ZF2DGame P2Unit : zfextend ZFStyle {
     ZFOBJECT_DECLARE(P2Unit, ZFStyle)
 
 public:
+    /**
+     * @brief see #ZFObject::observerNotify
+     *
+     * called when unit visibility changed by #P2World::p2_UIVisibleArea,
+     * current visibility can be checked by #p2_unitVisible
+     */
+    ZFEVENT(P2UnitOnVisibilityUpdate)
+
+    /**
+     * @brief see #ZFObject::observerNotify
+     *
+     * called when any child shape of this unit got #P2SensorEvent::p2_sensorEnterList,
+     * and this unit is the sensor\n
+     * param0 is the visitor #P2Unit
+     */
+    ZFEVENT(P2UnitOnSensorEnter)
+    /**
+     * @brief see #ZFObject::observerNotify
+     *
+     * called when any child shape of this unit got #P2SensorEvent::p2_sensorExitList,
+     * and this unit is the sensor\n
+     * param0 is the visitor #P2Unit
+     */
+    ZFEVENT(P2UnitOnSensorExit)
+    /**
+     * @brief see #ZFObject::observerNotify
+     *
+     * called when any child shape of this unit got #P2SensorEvent::p2_sensorEnterList,
+     * and this unit is the visitor\n
+     * param0 is the sensor #P2Unit
+     */
+    ZFEVENT(P2UnitOnVisitorEnter)
+    /**
+     * @brief see #ZFObject::observerNotify
+     *
+     * called when any child shape of this unit got #P2SensorEvent::p2_sensorExitList,
+     * and this unit is the visitor\n
+     * param0 is the sensor #P2Unit
+     */
+    ZFEVENT(P2UnitOnVisitorExit)
+
+    /**
+     * @brief see #ZFObject::observerNotify
+     *
+     * called when any child shape of this unit got #P2ContactEvent::p2_contactEnterList\n
+     * param0 is the other #P2Unit
+     */
+    ZFEVENT(P2UnitOnContactEnter)
+    /**
+     * @brief see #ZFObject::observerNotify
+     *
+     * called when any child shape of this unit got #P2ContactEvent::p2_contactExitList\n
+     * param0 is the other #P2Unit
+     */
+    ZFEVENT(P2UnitOnContactExit)
+
+public:
     /** @brief see #P2World */
     ZFMETHOD_DECLARE_0(P2World *, p2_ownerWorld)
+    /** @brief see #P2World */
+    ZFMETHOD_DECLARE_0(void, p2_unitRemoveLater)
 
 public:
     /** @brief see #P2World */
@@ -728,11 +815,18 @@ public:
      */
     ZFMETHOD_DECLARE_0(zfautoT<ZFContainer>, p2_refJointList)
 
+    /** @brief see #P2World::p2_UIVisibleArea */
+    ZFMETHOD_DECLARE_0(zfbool, p2_unitVisible)
+
 protected:
     zfoverride
     virtual void objectOnInit(void);
     zfoverride
     virtual void objectOnDealloc(void);
+    zfoverride
+    virtual void observerOnAdd(ZF_IN zfidentity eventId);
+    zfoverride
+    virtual void observerOnRemove(ZF_IN zfidentity eventId);
 
 public:
     _ZFP_P2UnitPrivate *_ZFP_P2Unit_d;
@@ -773,34 +867,11 @@ public:
 };
 
 /** @brief see #P2World */
-zfclassPOD ZFLIB_ZF2DGame P2ContactEventData {
-public:
-    /** @brief see #P2World */
-    P2Shape *p2_shape0;
-    /** @brief see #P2World */
-    P2Shape *p2_shape1;
-};
-ZFTYPEID_ACCESS_ONLY_DECLARE(ZFLIB_ZF2DGame, P2ContactEventData, P2ContactEventData)
-ZFTYPEID_ACCESS_ONLY_REG(ZFLIB_ZF2DGame, P2ContactEventData, P2ContactEventData)
-ZFOUTPUT_TYPE_DECLARE(ZFLIB_ZF2DGame, P2ContactEventData)
-ZFCORE_POD_DECLARE(P2ContactEventData)
-
-/** @brief see #P2World */
-zfclass ZFLIB_ZF2DGame P2ContactEvent : zfextend ZFObject {
-    ZFOBJECT_DECLARE(P2ContactEvent, ZFObject)
-public:
-    /** @brief see #P2World */
-    ZFCoreArray<P2ContactEventData> p2_contactEnterList;
-    /** @brief see #P2World */
-    ZFCoreArray<P2ContactEventData> p2_contactExitList;
-};
-
-/** @brief see #P2World */
 zfclassPOD ZFLIB_ZF2DGame P2SensorEventData {
 public:
-    /** @brief see #P2World */
+    /** @brief may be null, see #P2Body::p2_bodyRemoveLater */
     P2Shape *p2_shape0;
-    /** @brief see #P2World */
+    /** @brief may be null, see #P2Body::p2_bodyRemoveLater */
     P2Shape *p2_shape1;
 };
 ZFTYPEID_ACCESS_ONLY_DECLARE(ZFLIB_ZF2DGame, P2SensorEventData, P2SensorEventData)
@@ -814,17 +885,116 @@ zfclass ZFLIB_ZF2DGame P2SensorEvent : zfextend ZFObject {
 public:
     /** @brief see #P2World */
     ZFCoreArray<P2SensorEventData> p2_sensorEnterList;
-    /** @brief see #P2World */
+    /** @brief see #P2World, #P2Body::p2_bodyRemoveLater */
     ZFCoreArray<P2SensorEventData> p2_sensorExitList;
 };
 
+/** @brief see #P2World */
+zfclassPOD ZFLIB_ZF2DGame P2ContactEventData {
+public:
+    /** @brief may be null, see #P2Body::p2_bodyRemoveLater */
+    P2Shape *p2_shape0;
+    /** @brief may be null, see #P2Body::p2_bodyRemoveLater */
+    P2Shape *p2_shape1;
+};
+ZFTYPEID_ACCESS_ONLY_DECLARE(ZFLIB_ZF2DGame, P2ContactEventData, P2ContactEventData)
+ZFTYPEID_ACCESS_ONLY_REG(ZFLIB_ZF2DGame, P2ContactEventData, P2ContactEventData)
+ZFOUTPUT_TYPE_DECLARE(ZFLIB_ZF2DGame, P2ContactEventData)
+ZFCORE_POD_DECLARE(P2ContactEventData)
+
+/** @brief see #P2World */
+zfclass ZFLIB_ZF2DGame P2ContactEvent : zfextend ZFObject {
+    ZFOBJECT_DECLARE(P2ContactEvent, ZFObject)
+public:
+    /** @brief see #P2World */
+    ZFCoreArray<P2ContactEventData> p2_contactEnterList;
+    /** @brief see #P2World, #P2Body::p2_bodyRemoveLater */
+    ZFCoreArray<P2ContactEventData> p2_contactExitList;
+};
+
 // ============================================================
+/** @brief see #P2World */
+zfclassNotPOD P2WorldImpl {
+public:
+    virtual ~P2WorldImpl(void) {}
+public:
+    /** @brief called when body added to world, before #bodyMoveEvent */
+    virtual void bodyAdd(ZF_IN P2World *world, ZF_IN P2Body *body) zfpurevirtual;
+    /** @brief called when body removed from world */
+    virtual void bodyRemove(ZF_IN P2World *world, ZF_IN P2Body *body) zfpurevirtual;
+    /** @brief called to update body position */
+    virtual void bodyMoveEvent(ZF_IN P2World *world, ZF_IN P2BodyMoveEvent *event) zfpurevirtual;
+    /**
+     * @brief called when #P2World::p2_UIOffset or #P2World::p2_UIScale changed,
+     *   called only once after current simulation step
+     */
+    virtual void UIUpdate(ZF_IN P2World *world) zfpurevirtual;
+};
+
 zfclassFwd _ZFP_P2WorldPrivate;
 /**
  * @brief base physics world
+ *
+ * note: this module is more or less a packaging of box2d,
+ * you should be familiar with box2d before using this module\n
+ *
+ * main classes:
+ * -  #P2World : manage the physics world
+ * -  #P2Unit : a group of body, to simulate player or enemy or other unit,
+ *   it must have exact one main body, and optionally one or more body parts,
+ *   and usually all parts should be connected by joints,
+ *   explicitly or implicitly to the main body
+ * -  #P2Body : base physics body, one body usually should have one or more shapes
+ * -  #P2Shape : base shape
+ * -  #P2Joint : joint to connect two bodies, it can:
+ *   belong to #P2World (to control two logical unit in world),
+ *   or belong to #P2Unit (to describe connection within one logical unit)
+ *
+ * you can use #P2World in two different way:
+ * -  create a #P2World, then implement #P2World::p2impl,
+ *   to implement render and body management
+ * -  use #P2WorldView,
+ *   and use any #ZFUIView type to act as #P2Body
+ *   (#ZFUIView already marked as `ZFCLASS_EXTEND(ZFUIView, P2Body)`),
+ *   and the #P2WorldView would help you to manage your views as #P2Body
  */
 zfclass ZFLIB_ZF2DGame P2World : zfextend ZFStyle {
     ZFOBJECT_DECLARE(P2World, ZFStyle)
+
+public:
+    /**
+     * @brief see #ZFObject::observerNotify
+     *
+     * called before each simulation step
+     */
+    ZFEVENT(P2StepPrev)
+    /**
+     * @brief see #ZFObject::observerNotify
+     *
+     * called before each simulation step
+     */
+    ZFEVENT(P2StepPost)
+    /**
+     * @brief see #ZFObject::observerNotify
+     *
+     * called when any child unit's visibility changed during each simulation step,
+     * param0 is #P2UnitVisibilityEvent
+     */
+    ZFEVENT(P2UnitVisibilityEvent)
+    /**
+     * @brief see #ZFObject::observerNotify
+     *
+     * called when any child shape fired sensor event during each simulation step,
+     * param0 is #P2SensorEvent
+     */
+    ZFEVENT(P2SensorEvent)
+    /**
+     * @brief see #ZFObject::observerNotify
+     *
+     * called when any child shape fired contact event during each simulation step,
+     * param0 is #P2ContactEvent
+     */
+    ZFEVENT(P2ContactEvent)
 
 public:
     /** @brief see #P2World */
@@ -832,26 +1002,21 @@ public:
     ZFPROPERTY_ON_UPDATE_DECLARE(ZFUIPoint, p2_gravity)
 
 public:
-    /**
-     * @brief see #P2World
-     *
-     * the visible area, should be updated by UI module,
-     * according to #p2_UIOffset and #p2_UIScale,
-     * #p2impl_unitVisibilityEvent would be fired to notify changed units\n
-     * can be #ZFUIRectZero, which indicates all units are visible
-     */
-    ZFMETHOD_DECLARE_1(void, p2_visibleArea
-            , ZFMP_IN(const ZFUIRect &, v)
-            )
-    /** @brief see #P2World */
-    ZFMETHOD_DECLARE_0(const ZFUIRect &, p2_visibleArea)
-
     /** @brief see #P2World */
     ZFPROPERTY_ASSIGN(ZFUIPoint, p2_UIOffset)
     ZFPROPERTY_ON_UPDATE_DECLARE(ZFUIPoint, p2_UIOffset)
-    /** @brief see #P2World, note changing ui scale is heavy task */
+    /** @brief see #P2World */
     ZFPROPERTY_ASSIGN(zffloat, p2_UIScale, 50)
     ZFPROPERTY_ON_UPDATE_DECLARE(zffloat, p2_UIScale)
+    /** @brief see #P2World, extra margin to calculate proper #p2_UIVisibleArea */
+    ZFPROPERTY_ASSIGN(ZFUIMargin, p2_UIVisibleAreaMargin, ZFUIMarginCreate(-1))
+    /** @brief see #P2World, visible area according to #p2_UIOffset */
+    ZFMETHOD_DECLARE_0(const ZFUIRect &, p2_UIVisibleArea)
+    /** @brief see #P2World, visible area according to #p2_UIOffset, should be updated by #p2impl */
+    ZFMETHOD_DECLARE_1(void, p2_UIVisibleArea
+            , ZFMP_IN(const ZFUIRect &, v)
+            )
+
     /** @brief see #P2World */
     ZFMETHOD_DECLARE_0(void, p2_start)
     /** @brief see #P2World */
@@ -964,26 +1129,8 @@ public:
             )
 
 public:
-    /** @brief called when #p2_UIOffset changed */
-    ZFListener p2impl_UIOffsetUpdate;
-    /** @brief called when #p2_UIScale changed */
-    ZFListener p2impl_UIScaleUpdate;
-    /** @brief called when body added to world, param0 is the #P2Body added, before #p2impl_bodyMoveEvent */
-    ZFListener p2impl_bodyAdd;
-    /** @brief called when body removed from world, param0 is the #P2Body added */
-    ZFListener p2impl_bodyRemove;
-    /** @brief called when unit enter or exit #p2_visibleArea, param0 is #P2UnitVisibilityEvent */
-    ZFListener p2impl_unitVisibilityEvent;
-    /** @brief called to update body position, param0 is #P2BodyMoveEvent */
-    ZFListener p2impl_bodyMoveEvent;
-    /** @brief called to update contact event, param0 is #P2ContactEvent */
-    ZFListener p2impl_contactEvent;
-    /** @brief called to update sensor event, param0 is #P2SensorEvent */
-    ZFListener p2impl_sensorEvent;
-    /** @brief called before each simulation step, body and joint impls may not have been initialized */
-    ZFListener p2impl_stepPrev;
-    /** @brief called after each simulation step, after #p2impl_bodyMoveEvent series */
-    ZFListener p2impl_stepPost;
+    /** @brief the impl */
+    P2WorldImpl *p2impl;
 
 protected:
     zfoverride
@@ -992,6 +1139,10 @@ protected:
     virtual void objectOnDealloc(void);
     zfoverride
     virtual void objectOnDeallocPrepare(void);
+    zfoverride
+    virtual void observerOnAdd(ZF_IN zfidentity eventId);
+    zfoverride
+    virtual void observerOnRemove(ZF_IN zfidentity eventId);
 
 public:
     _ZFP_P2WorldPrivate *_ZFP_P2World_d;
