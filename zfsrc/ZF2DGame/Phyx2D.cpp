@@ -2639,8 +2639,6 @@ static void _ZFP_P2BodyImplCreate(ZF_IN P2World *world, ZF_IN P2Body *body) {
         _ZFP_P2ShapePrivate::shapeCreate(body, shape);
     }
 
-    // explicitly update transform, to ensure shape and body's AABB get updated
-    b2Body_SetTransform(body->_ZFP_P2Body_d->implBodyId, b2Vec2FromZF(body->p2_position()), b2RotFromZF(body->p2_rotation()));
     b2Body_ApplyMassFromShapes(body->_ZFP_P2Body_d->implBodyId);
     body->_ZFP_P2Body_d->massNeedUpdate = zffalse;
 
@@ -2661,6 +2659,7 @@ static void _ZFP_P2WorldImplStep_pendingBody(ZF_IN P2World *world) {
             }
         }
     }
+    pendingBody.clear();
 }
 
 static void _ZFP_P2WorldImplStep_pendingJoint(ZF_IN P2World *world) {
