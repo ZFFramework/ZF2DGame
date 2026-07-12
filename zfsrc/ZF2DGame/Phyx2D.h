@@ -72,7 +72,7 @@ public:
     ZFPROPERTY_ASSIGN(zffloat, p2_matFriction, 0.6f)
     ZFPROPERTY_ON_UPDATE_DECLARE(zffloat, p2_matFriction)
     /** @brief see #P2World, range in [0, 1], how much to bounce when collide */
-    ZFPROPERTY_ASSIGN(zffloat, p2_matBounce)
+    ZFPROPERTY_ASSIGN(zffloat, p2_matBounce, 0.05f)
     ZFPROPERTY_ON_UPDATE_DECLARE(zffloat, p2_matBounce)
     /** @brief see #P2World, range in [0, 1] */
     ZFPROPERTY_ASSIGN(zffloat, p2_matRotationResist)
@@ -89,10 +89,14 @@ public:
     ZFPROPERTY_ON_UPDATE_DECLARE(zffloat, p2_matTangentSpeed)
 
 public:
-    /** @brief see #P2World */
+    /** @brief see #P2World, get world AABB, valid only after added to world */
     ZFMETHOD_DECLARE_0(ZFUIRect, p2_AABB)
+    /** @brief see #P2World, get local AABB, according to current property only */
+    ZFMETHOD_DECLARE_0(ZFUIRect, p2_AABBLocal)
 
 protected:
+    /** @brief for impl only */
+    virtual ZFUIRect p2impl_AABBLocal(void) zfpurevirtual;
     /** @brief for impl only */
     virtual inline void p2impl_shapeCreate(ZF_IN P2Body *ownerBody) {}
     zfoverride
@@ -110,15 +114,19 @@ zfclass ZFLIB_ZF2DGame P2ShapeBox : zfextend P2Shape {
     ZFOBJECT_DECLARE(P2ShapeBox, P2Shape)
     /** @brief see #P2World */
     ZFPROPERTY_ASSIGN(ZFUIPoint, p2_position)
+    ZFPROPERTY_ON_UPDATE_DECLARE(ZFUIPoint, p2_position)
     /** @brief see #P2World */
-    ZFPROPERTY_ASSIGN(zffloat, p2_width)
-    /** @brief see #P2World */
-    ZFPROPERTY_ASSIGN(zffloat, p2_height)
+    ZFPROPERTY_ASSIGN(ZFUISize, p2_size, ZFUISizeCreate(1))
+    ZFPROPERTY_ON_UPDATE_DECLARE(ZFUISize, p2_size)
     /** @brief see #P2World */
     ZFPROPERTY_ASSIGN(zffloat, p2_rotation)
+    ZFPROPERTY_ON_UPDATE_DECLARE(zffloat, p2_rotation)
     /** @brief see #P2World */
     ZFPROPERTY_ASSIGN(zffloat, p2_radius)
+    ZFPROPERTY_ON_UPDATE_DECLARE(zffloat, p2_radius)
 protected:
+    zfoverride
+    virtual ZFUIRect p2impl_AABBLocal(void);
     zfoverride
     virtual void p2impl_shapeCreate(ZF_IN P2Body *ownerBody);
 };
@@ -127,9 +135,13 @@ zfclass ZFLIB_ZF2DGame P2ShapeCircle : zfextend P2Shape {
     ZFOBJECT_DECLARE(P2ShapeCircle, P2Shape)
     /** @brief see #P2World */
     ZFPROPERTY_ASSIGN(ZFUIPoint, p2_position)
+    ZFPROPERTY_ON_UPDATE_DECLARE(ZFUIPoint, p2_position)
     /** @brief see #P2World */
-    ZFPROPERTY_ASSIGN(zffloat, p2_radius)
+    ZFPROPERTY_ASSIGN(zffloat, p2_radius, 1)
+    ZFPROPERTY_ON_UPDATE_DECLARE(zffloat, p2_radius)
 protected:
+    zfoverride
+    virtual ZFUIRect p2impl_AABBLocal(void);
     zfoverride
     virtual void p2impl_shapeCreate(ZF_IN P2Body *ownerBody);
 };
@@ -138,11 +150,16 @@ zfclass ZFLIB_ZF2DGame P2ShapeCapsule : zfextend P2Shape {
     ZFOBJECT_DECLARE(P2ShapeCapsule, P2Shape)
     /** @brief see #P2World */
     ZFPROPERTY_ASSIGN(ZFUIPoint, p2_position0)
+    ZFPROPERTY_ON_UPDATE_DECLARE(ZFUIPoint, p2_position0)
     /** @brief see #P2World */
     ZFPROPERTY_ASSIGN(ZFUIPoint, p2_position1)
+    ZFPROPERTY_ON_UPDATE_DECLARE(ZFUIPoint, p2_position1)
     /** @brief see #P2World */
-    ZFPROPERTY_ASSIGN(zffloat, p2_radius)
+    ZFPROPERTY_ASSIGN(zffloat, p2_radius, 1)
+    ZFPROPERTY_ON_UPDATE_DECLARE(zffloat, p2_radius)
 protected:
+    zfoverride
+    virtual ZFUIRect p2impl_AABBLocal(void);
     zfoverride
     virtual void p2impl_shapeCreate(ZF_IN P2Body *ownerBody);
 };
@@ -158,6 +175,8 @@ public:
             , ZFMP_IN_OPT(zffloat, radius, 0)
             )
 protected:
+    zfoverride
+    virtual ZFUIRect p2impl_AABBLocal(void);
     zfoverride
     virtual void p2impl_shapeCreate(ZF_IN P2Body *ownerBody);
 
@@ -534,7 +553,7 @@ public:
     ZFMETHOD_DECLARE_0(zfautoT<ZFContainer>, p2_refJointList)
 
 public:
-    /** @brief see #P2World */
+    /** @brief see #P2World, must be unique within same #P2World */
     ZFPROPERTY_ASSIGN(zfstring, p2_bodyId)
     ZFPROPERTY_ON_UPDATE_DECLARE(zfstring, p2_bodyId)
     /** @brief see #P2World */
@@ -554,7 +573,7 @@ public:
     ZFPROPERTY_ASSIGN(zfbool, p2_rotationFixed)
     ZFPROPERTY_ON_UPDATE_DECLARE(zfbool, p2_rotationFixed)
     /** @brief see #P2World */
-    ZFPROPERTY_ASSIGN(zffloat, p2_gravityScale)
+    ZFPROPERTY_ASSIGN(zffloat, p2_gravityScale, 1.0f)
     ZFPROPERTY_ON_UPDATE_DECLARE(zffloat, p2_gravityScale)
 
     /** @brief see #P2World */
@@ -578,15 +597,22 @@ public:
     ZFPROPERTY_ON_UPDATE_DECLARE(zffloat, p2_rotationDamping)
 
 public:
-    /** @brief see #P2World, note: calculate each time called */
+    /** @brief see #P2World, world AABB, note: calculate each time called */
     ZFMETHOD_DECLARE_0(ZFUIRect, p2_AABB)
-    /** @brief get all child shape's bounding size, calculate and cached automatically */
+    /** @brief see #P2World, local AABB, calculate by each shape's #P2Shape::p2_AABBLocal */
+    ZFMETHOD_DECLARE_0(ZFUIRect, p2_AABBLocal)
+    /**
+     * @brief get minimal bounding box size that can holds all child shapes, calculate and cached automatically
+     *
+     * origin point ensured at center of the bounding box,
+     * all child shapes can be layouted as their proper position according to the origin point
+     */
     ZFMETHOD_DECLARE_0(ZFUISize, p2_bodySize)
+    /** @brief see #P2World, relative to center of #p2_bodySize, calculate and cached automatically */
+    ZFMETHOD_DECLARE_0(ZFUIPoint, p2_centerOfMass)
 
     /** @brief see #P2World */
     ZFMETHOD_DECLARE_0(zffloat, p2_mass)
-    /** @brief see #P2World */
-    ZFMETHOD_DECLARE_0(ZFUIPoint, p2_centerOfMass)
     /**
      * @brief see #P2World
      *
@@ -608,9 +634,9 @@ public:
 
 public:
     /** @brief see #P2World */
-    ZFMETHOD_DECLARE_0(zfbool, sleeping)
+    ZFMETHOD_DECLARE_0(zfbool, p2_sleeping)
     /** @brief see #P2World */
-    ZFMETHOD_DECLARE_1(void, sleeping
+    ZFMETHOD_DECLARE_1(void, p2_sleeping
             , ZFMP_IN(zfbool, v)
             )
 
@@ -957,6 +983,15 @@ zfclassFwd _ZFP_P2WorldPrivate;
  *   and use any #ZFUIView type to act as #P2Body
  *   (#ZFUIView already marked as `ZFCLASS_EXTEND(ZFUIView, P2Body)`),
  *   and the #P2WorldView would help you to manage your views as #P2Body
+ *
+ * NOTE:
+ * -  for #P2World, origin point is at left down zero point,
+ *   and rotation is counter clockwise
+ * -  for #ZFUIView, origin point is at left top zero point,
+ *   and rotation is clockwise
+ * -  when using #P2WorldView,
+ *   you should always use methods declared in #P2World (all method name starts with `p2_`)
+ *   to manage children/body/shapes
  */
 zfclass ZFLIB_ZF2DGame P2World : zfextend ZFStyle {
     ZFOBJECT_DECLARE(P2World, ZFStyle)
@@ -1008,6 +1043,15 @@ public:
     /** @brief see #P2World */
     ZFPROPERTY_ASSIGN(zffloat, p2_UIScale, 50)
     ZFPROPERTY_ON_UPDATE_DECLARE(zffloat, p2_UIScale)
+    /**
+     * @brief explicitly request update UI
+     *
+     * #P2WorldImpl::UIUpdate would only get called if #p2_UIOffset or #p2_UIScale really changed,
+     * you may use this method to explicitly request update UI,
+     * typically because of renderer size changed
+     */
+    ZFMETHOD_DECLARE_0(void, p2_UIUpdateRequest)
+
     /** @brief see #P2World, extra margin to calculate proper #p2_UIVisibleArea */
     ZFPROPERTY_ASSIGN(ZFUIMargin, p2_UIVisibleAreaMargin, ZFUIMarginCreate(-1))
     /** @brief see #P2World, visible area according to #p2_UIOffset */

@@ -67,7 +67,7 @@ public:
     }
 private:
     void _bodyPosUpdate(ZF_IN P2Body *body, ZF_IN ZFUIView *bodyView, ZF_IN const ZFUIPoint &position, ZF_IN zffloat rotation) {
-        bodyView->rotateZ(rotation);
+        bodyView->rotateZ(360 - rotation);
 
         const ZFUIPoint &implOffset = world->p2_UIOffset();
         zffloat implScale = world->p2_UIScale();
@@ -76,7 +76,7 @@ private:
 
         bodyView->viewFrame(ZFUIRectCreate(
                     (position.x - implOffset.x) * implScale
-                    , worldView->height() - (position.y + implSize.height) * implScale
+                    , worldView->height() - (position.y - implCenter.y + implSize.height / 2) * implScale
                     , implSize.width * implScale
                     , implSize.height * implScale
                     ));
@@ -111,6 +111,15 @@ void P2WorldView::objectOnDeallocPrepare(void) {
 
 void P2WorldView::layoutOnLayout(ZF_IN const ZFUIRect &bounds) {
     zfsuper::layoutOnLayout(bounds);
+    {
+        const ZFUIRect &viewFrame = this->viewFrame();
+        const ZFUIRect &viewFramePrev = this->viewFramePrev();
+        if(viewFrame.width != viewFramePrev.width
+                || viewFrame.height != viewFramePrev.height
+                ) {
+            d->world->p2_UIUpdateRequest();
+        }
+    }
     d->visibleAreaUpdate(bounds);
 }
 

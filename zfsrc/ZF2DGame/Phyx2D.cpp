@@ -120,7 +120,8 @@ public:
     b2BodyId implBodyId;
     P2Unit *ownerUnit;
     zfimplhashmap<P2Joint *, zfbool> bodyRefJointList;
-    ZFUISize bodySize; // ZFUISizeInvalid if needs update
+    ZFUISize bodySize; // bodySize.width==-1 if needs update
+    ZFUIPoint centerOfMass; // bodySize.width==-1 if needs update, relative to bodySize
     zfbool massNeedUpdate;
 public:
     _ZFP_P2BodyPrivate(void)
@@ -128,8 +129,50 @@ public:
     , ownerUnit(zfnull)
     , bodyRefJointList()
     , bodySize(ZFUISizeInvalid())
+    , centerOfMass()
     , massNeedUpdate(zftrue)
     {
+    }
+public:
+    ZFUIRect bodyAABBLocal(void) {
+        P2Body *body = (P2Body *)b2Body_GetUserData(this->implBodyId);
+        ZFCoreAssert(body);
+        ZFUIRect ret = ZFUIRectZero();
+        for(zfindex i = body->p2_shapeCount() - 1; i != zfindexMax(); --i) {
+            ZFUIRect shapeAABB = body->p2_shapeAt(i)->p2_AABBLocal();
+            ret = ZFUIRectUnion(ret, shapeAABB);
+        }
+        return ret;
+    }
+    void bodyPosUpdate(void) {
+        if(B2_IS_NULL(this->implBodyId)) {
+            this->bodySize = ZFUISizeZero();
+            this->centerOfMass = ZFUIPointZero();
+        }
+        else {
+            ZFUIRect bodyAABBLocal = this->bodyAABBLocal();
+            zffloat left = bodyAABBLocal.x;
+            zffloat top = bodyAABBLocal.y;
+            zffloat right = bodyAABBLocal.x + bodyAABBLocal.width;
+            zffloat bottom = bodyAABBLocal.y + bodyAABBLocal.height;
+            if(0 - left > right) {
+                right = 0 - left;
+            }
+            else {
+                left = 0 - right;
+            }
+            if(0 - top > bottom) {
+                bottom = 0 - top;
+            }
+            else {
+                top = 0 - bottom;
+            }
+
+            this->bodySize.width = right - left;
+            this->bodySize.height = bottom - top;
+
+            this->centerOfMass = b2Vec2ToZF(b2Body_GetLocalCenterOfMass(this->implBodyId));
+        }
     }
 };
 
@@ -416,7 +459,17 @@ ZFMETHOD_DEFINE_0(P2Shape, ZFUIRect, p2_AABB) {
     if(B2_IS_NULL(_ZFP_P2Shape_d->implShapeId)) {
         return ZFUIRectZero();
     }
-    return b2AABBToZF(b2Shape_GetAABB(_ZFP_P2Shape_d->implShapeId));
+    else {
+        return b2AABBToZF(b2Shape_GetAABB(_ZFP_P2Shape_d->implShapeId));
+    }
+}
+ZFMETHOD_DEFINE_0(P2Shape, ZFUIRect, p2_AABBLocal) {
+    if(B2_IS_NULL(_ZFP_P2Shape_d->implShapeId)) {
+        return ZFUIRectZero();
+    }
+    else {
+        return this->p2impl_AABBLocal();
+    }
 }
 
 void P2Shape::objectOnInit(void) {
@@ -461,38 +514,66 @@ static void _ZFP_P2Shape_implShapeDef(ZF_IN_OUT b2ShapeDef &cfg, ZF_IN P2Shape *
 
 // ============================================================
 ZFOBJECT_REGISTER(P2ShapeBox)
+ZFPROPERTY_ON_UPDATE_DEFINE(P2ShapeBox, ZFUIPoint, p2_position) {
+    ZFCoreAssertWithMessageTrim(B2_IS_NULL(_ZFP_P2Shape_d->implShapeId)
+            , "must not be changed after added to world"
+            );
+}
+ZFPROPERTY_ON_UPDATE_DEFINE(P2ShapeBox, ZFUISize, p2_size) {
+    ZFCoreAssertWithMessageTrim(B2_IS_NULL(_ZFP_P2Shape_d->implShapeId)
+            , "must not be changed after added to world"
+            );
+}
+ZFPROPERTY_ON_UPDATE_DEFINE(P2ShapeBox, zffloat, p2_rotation) {
+    ZFCoreAssertWithMessageTrim(B2_IS_NULL(_ZFP_P2Shape_d->implShapeId)
+            , "must not be changed after added to world"
+            );
+}
+ZFPROPERTY_ON_UPDATE_DEFINE(P2ShapeBox, zffloat, p2_radius) {
+    ZFCoreAssertWithMessageTrim(B2_IS_NULL(_ZFP_P2Shape_d->implShapeId)
+            , "must not be changed after added to world"
+            );
+}
+static b2Polygon _ZFP_P2ShapeBox_implDef(ZF_IN P2ShapeBox *shape) {
+    const ZFUISize &size = shape->p2_size();
+    return shape->p2_position() == ZFUIPointZero() && shape->p2_rotation() == 0
+        ? shape->p2_radius() == 0
+            ? b2MakeBox(
+                    size.width / 2
+                    , size.height / 2
+                    )
+            : b2MakeRoundedBox(
+                    size.width / 2
+                    , size.height / 2
+                    , shape->p2_radius()
+                    )
+        : shape->p2_radius() == 0
+            ? b2MakeOffsetBox(
+                    size.width / 2
+                    , size.height / 2
+                    , b2Vec2FromZF(shape->p2_position())
+                    , b2RotFromZF(shape->p2_rotation())
+                    )
+            : b2MakeOffsetRoundedBox(
+                    size.width / 2
+                    , size.height / 2
+                    , b2Vec2FromZF(shape->p2_position())
+                    , b2RotFromZF(shape->p2_rotation())
+                    , shape->p2_radius()
+                    )
+        ;
+}
+ZFUIRect P2ShapeBox::p2impl_AABBLocal(void) {
+    b2Polygon impl = _ZFP_P2ShapeBox_implDef(this);
+    return b2AABBToZF(b2ComputePolygonAABB(&impl, b2Transform_identity));
+}
 void P2ShapeBox::p2impl_shapeCreate(ZF_IN P2Body *ownerBody) {
     zfsuper::p2impl_shapeCreate(ownerBody);
-    ZFCoreAssert(this->p2_width() > 0 && this->p2_height() > 0);
+    ZFCoreAssert(!ZFUISizeIsEmpty(this->p2_size()));
 
     b2ShapeDef implShapeDef = b2DefaultShapeDef();
     _ZFP_P2Shape_implShapeDef(implShapeDef, this, ownerBody);
-    b2Polygon implPolygon = this->p2_position() == ZFUIPointZero() && this->p2_rotation() == 0
-        ? this->p2_radius() == 0
-            ? b2MakeBox(
-                    this->p2_width() / 2
-                    , this->p2_height() / 2
-                    )
-            : b2MakeRoundedBox(
-                    this->p2_width() / 2
-                    , this->p2_height() / 2
-                    , this->p2_radius()
-                    )
-        : this->p2_radius() == 0
-            ? b2MakeOffsetBox(
-                    this->p2_width() / 2
-                    , this->p2_height() / 2
-                    , b2Vec2FromZF(this->p2_position())
-                    , b2RotFromZF(this->p2_rotation())
-                    )
-            : b2MakeOffsetRoundedBox(
-                    this->p2_width() / 2
-                    , this->p2_height() / 2
-                    , b2Vec2FromZF(this->p2_position())
-                    , b2RotFromZF(this->p2_rotation())
-                    , this->p2_radius()
-                    )
-        ;
+    b2Polygon implPolygon = _ZFP_P2ShapeBox_implDef(this);
     _ZFP_P2Shape_d->implShapeId = b2CreatePolygonShape(
             ownerBody->_ZFP_P2Body_d->implBodyId
             , &implShapeDef
@@ -501,15 +582,33 @@ void P2ShapeBox::p2impl_shapeCreate(ZF_IN P2Body *ownerBody) {
 }
 
 ZFOBJECT_REGISTER(P2ShapeCircle)
+ZFPROPERTY_ON_UPDATE_DEFINE(P2ShapeCircle, ZFUIPoint, p2_position) {
+    ZFCoreAssertWithMessageTrim(B2_IS_NULL(_ZFP_P2Shape_d->implShapeId)
+            , "must not be changed after added to world"
+            );
+}
+ZFPROPERTY_ON_UPDATE_DEFINE(P2ShapeCircle, zffloat, p2_radius) {
+    ZFCoreAssertWithMessageTrim(B2_IS_NULL(_ZFP_P2Shape_d->implShapeId)
+            , "must not be changed after added to world"
+            );
+}
+static b2Circle _ZFP_P2ShapeCircle_implDef(ZF_IN P2ShapeCircle *shape) {
+    b2Circle implCircle;
+    implCircle.center = b2Vec2FromZF(shape->p2_position());
+    implCircle.radius = shape->p2_radius();
+    return implCircle;
+}
+ZFUIRect P2ShapeCircle::p2impl_AABBLocal(void) {
+    b2Circle impl = _ZFP_P2ShapeCircle_implDef(this);
+    return b2AABBToZF(b2ComputeCircleAABB(&impl, b2Transform_identity));
+}
 void P2ShapeCircle::p2impl_shapeCreate(ZF_IN P2Body *ownerBody) {
     zfsuper::p2impl_shapeCreate(ownerBody);
     ZFCoreAssert(this->p2_radius() > 0);
 
     b2ShapeDef implShapeDef = b2DefaultShapeDef();
     _ZFP_P2Shape_implShapeDef(implShapeDef, this, ownerBody);
-    b2Circle implCircle;
-    implCircle.center = b2Vec2FromZF(this->p2_position());
-    implCircle.radius = this->p2_radius();
+    b2Circle implCircle = _ZFP_P2ShapeCircle_implDef(this);
     _ZFP_P2Shape_d->implShapeId = b2CreateCircleShape(
             ownerBody->_ZFP_P2Body_d->implBodyId
             , &implShapeDef
@@ -518,33 +617,44 @@ void P2ShapeCircle::p2impl_shapeCreate(ZF_IN P2Body *ownerBody) {
 }
 
 ZFOBJECT_REGISTER(P2ShapeCapsule)
+ZFPROPERTY_ON_UPDATE_DEFINE(P2ShapeCapsule, ZFUIPoint, p2_position0) {
+    ZFCoreAssertWithMessageTrim(B2_IS_NULL(_ZFP_P2Shape_d->implShapeId)
+            , "must not be changed after added to world"
+            );
+}
+ZFPROPERTY_ON_UPDATE_DEFINE(P2ShapeCapsule, ZFUIPoint, p2_position1) {
+    ZFCoreAssertWithMessageTrim(B2_IS_NULL(_ZFP_P2Shape_d->implShapeId)
+            , "must not be changed after added to world"
+            );
+}
+ZFPROPERTY_ON_UPDATE_DEFINE(P2ShapeCapsule, zffloat, p2_radius) {
+    ZFCoreAssertWithMessageTrim(B2_IS_NULL(_ZFP_P2Shape_d->implShapeId)
+            , "must not be changed after added to world"
+            );
+}
+static b2Capsule _ZFP_P2ShapeCapsule_implDef(ZF_IN P2ShapeCapsule *shape) {
+    b2Capsule implCapsule;
+    implCapsule.center1 = b2Vec2FromZF(shape->p2_position0());
+    implCapsule.center2 = b2Vec2FromZF(shape->p2_position1());
+    implCapsule.radius = shape->p2_radius();
+    return implCapsule;
+}
+ZFUIRect P2ShapeCapsule::p2impl_AABBLocal(void) {
+    b2Capsule impl = _ZFP_P2ShapeCapsule_implDef(this);
+    return b2AABBToZF(b2ComputeCapsuleAABB(&impl, b2Transform_identity));
+}
 void P2ShapeCapsule::p2impl_shapeCreate(ZF_IN P2Body *ownerBody) {
     zfsuper::p2impl_shapeCreate(ownerBody);
     ZFCoreAssert(this->p2_radius() > 0);
 
     b2ShapeDef implShapeDef = b2DefaultShapeDef();
     _ZFP_P2Shape_implShapeDef(implShapeDef, this, ownerBody);
-    if(this->p2_position0() == this->p2_position1()) {
-        b2Circle implCircle;
-        implCircle.center = b2Vec2FromZF(this->p2_position0());
-        implCircle.radius = this->p2_radius();
-        _ZFP_P2Shape_d->implShapeId = b2CreateCircleShape(
-                ownerBody->_ZFP_P2Body_d->implBodyId
-                , &implShapeDef
-                , &implCircle
-                );
-    }
-    else {
-        b2Capsule implCapsule;
-        implCapsule.center1 = b2Vec2FromZF(this->p2_position0());
-        implCapsule.center2 = b2Vec2FromZF(this->p2_position1());
-        implCapsule.radius = this->p2_radius();
-        _ZFP_P2Shape_d->implShapeId = b2CreateCapsuleShape(
-                ownerBody->_ZFP_P2Body_d->implBodyId
-                , &implShapeDef
-                , &implCapsule
-                );
-    }
+    b2Capsule implCapsule = _ZFP_P2ShapeCapsule_implDef(this);
+    _ZFP_P2Shape_d->implShapeId = b2CreateCapsuleShape(
+            ownerBody->_ZFP_P2Body_d->implBodyId
+            , &implShapeDef
+            , &implCapsule
+            );
 }
 
 ZFOBJECT_REGISTER(P2ShapePolygon)
@@ -554,6 +664,9 @@ ZFMETHOD_DEFINE_4(P2ShapePolygon, void, p2_polygon
         , ZFMP_IN_OPT(zffloat, rotation, 0)
         , ZFMP_IN_OPT(zffloat, radius, 0)
         ) {
+    ZFCoreAssertWithMessageTrim(B2_IS_NULL(_ZFP_P2Shape_d->implShapeId)
+            , "must not be changed after added to world"
+            );
     ZFCoreAssert(B2_IS_NULL(_ZFP_P2Shape_d->implShapeId));
     ZFCoreAssert(!points.isEmpty());
     this->p2_polygon_points(points);
@@ -561,30 +674,37 @@ ZFMETHOD_DEFINE_4(P2ShapePolygon, void, p2_polygon
     this->p2_polygon_rotation(rotation);
     this->p2_polygon_radius(radius);
 }
+static b2Polygon _ZFP_P2ShapePolygon_implDef(ZF_IN P2ShapePolygon *shape) {
+    b2Hull implHull = b2ComputeHull((const b2Vec2 *)(shape->p2_polygon_points().arrayBuf()), (int)shape->p2_polygon_points().count());
+    ZFCoreAssertWithMessageTrim(implHull.count > 0
+            , "invalid polygon points, shape: %s"
+            , shape->p2_polygon_points().objectInfoOfContent()
+            , shape
+            );
+    return shape->p2_polygon_position() == ZFUIPointZero() && shape->p2_polygon_rotation() == 0
+        ? b2MakePolygon(
+                &implHull
+                , shape->p2_polygon_radius()
+                )
+        : b2MakeOffsetRoundedPolygon(
+                &implHull
+                , b2Vec2FromZF(shape->p2_polygon_position())
+                , b2RotFromZF(shape->p2_polygon_rotation())
+                , shape->p2_polygon_radius()
+                )
+        ;
+}
+ZFUIRect P2ShapePolygon::p2impl_AABBLocal(void) {
+    b2Polygon impl = _ZFP_P2ShapePolygon_implDef(this);
+    return b2AABBToZF(b2ComputePolygonAABB(&impl, b2Transform_identity));
+}
 void P2ShapePolygon::p2impl_shapeCreate(ZF_IN P2Body *ownerBody) {
     zfsuper::p2impl_shapeCreate(ownerBody);
     ZFCoreAssert(!this->p2_polygon_points().isEmpty());
 
     b2ShapeDef implShapeDef = b2DefaultShapeDef();
     _ZFP_P2Shape_implShapeDef(implShapeDef, this, ownerBody);
-    b2Hull implHull = b2ComputeHull((const b2Vec2 *)(this->p2_polygon_points().arrayBuf()), (int)this->p2_polygon_points().count());
-    ZFCoreAssertWithMessageTrim(implHull.count > 0
-            , "invalid polygon points, shape: %s"
-            , this->p2_polygon_points().objectInfoOfContent()
-            , this
-            );
-    b2Polygon implPolygon = this->p2_polygon_position() == ZFUIPointZero() && this->p2_polygon_rotation() == 0
-        ? b2MakePolygon(
-                &implHull
-                , this->p2_polygon_radius()
-                )
-        : b2MakeOffsetRoundedPolygon(
-                &implHull
-                , b2Vec2FromZF(this->p2_polygon_position())
-                , b2RotFromZF(this->p2_polygon_rotation())
-                , this->p2_polygon_radius()
-                )
-        ;
+    b2Polygon implPolygon = _ZFP_P2ShapePolygon_implDef(this);
     _ZFP_P2Shape_d->implShapeId = b2CreatePolygonShape(
             ownerBody->_ZFP_P2Body_d->implBodyId
             , &implShapeDef
@@ -1557,13 +1677,30 @@ ZFMETHOD_DEFINE_0(P2Body, ZFUIRect, p2_AABB) {
         return ZFUIRectZero();
     }
 }
+ZFMETHOD_DEFINE_0(P2Body, ZFUIRect, p2_AABBLocal) {
+    if(B2_IS_NON_NULL(_ZFP_P2Body_d->implBodyId)) {
+        return _ZFP_P2Body_d->bodyAABBLocal();
+    }
+    else {
+        return ZFUIRectZero();
+    }
+}
 ZFMETHOD_DEFINE_0(P2Body, ZFUISize, p2_bodySize) {
     if(_ZFP_P2Body_d->bodySize.width == -1) {
-        _ZFP_P2Body_d->bodySize = ZFUIRectGetSize(this->p2_AABB());
+        _ZFP_P2Body_d->bodyPosUpdate();
         return _ZFP_P2Body_d->bodySize;
     }
     else {
         return _ZFP_P2Body_d->bodySize;
+    }
+}
+ZFMETHOD_DEFINE_0(P2Body, ZFUIPoint, p2_centerOfMass) {
+    if(_ZFP_P2Body_d->bodySize.width == -1) {
+        _ZFP_P2Body_d->bodyPosUpdate();
+        return _ZFP_P2Body_d->centerOfMass;
+    }
+    else {
+        return _ZFP_P2Body_d->centerOfMass;
     }
 }
 ZFMETHOD_DEFINE_0(P2Body, zffloat, p2_mass) {
@@ -1572,14 +1709,6 @@ ZFMETHOD_DEFINE_0(P2Body, zffloat, p2_mass) {
     }
     else {
         return 0;
-    }
-}
-ZFMETHOD_DEFINE_0(P2Body, ZFUIPoint, p2_centerOfMass) {
-    if(B2_IS_NON_NULL(_ZFP_P2Body_d->implBodyId)) {
-        return b2Vec2ToZF(b2Body_GetLocalCenterOfMass(_ZFP_P2Body_d->implBodyId));
-    }
-    else {
-        return ZFUIPointZero();
     }
 }
 ZFMETHOD_DEFINE_0(P2Body, zffloat, p2_rotationInertia) {
@@ -1623,7 +1752,7 @@ ZFMETHOD_DEFINE_0(P2Body, zffloat, p2_rotationVelocityCur) {
     }
 }
 
-ZFMETHOD_DEFINE_0(P2Body, zfbool, sleeping) {
+ZFMETHOD_DEFINE_0(P2Body, zfbool, p2_sleeping) {
     if(B2_IS_NON_NULL(_ZFP_P2Body_d->implBodyId)) {
         return !b2Body_IsAwake(_ZFP_P2Body_d->implBodyId);
     }
@@ -1631,7 +1760,7 @@ ZFMETHOD_DEFINE_0(P2Body, zfbool, sleeping) {
         return zffalse;
     }
 }
-ZFMETHOD_DEFINE_1(P2Body, void, sleeping
+ZFMETHOD_DEFINE_1(P2Body, void, p2_sleeping
         , ZFMP_IN(zfbool, v)
         ) {
     if(B2_IS_NON_NULL(_ZFP_P2Body_d->implBodyId)) {
@@ -1989,6 +2118,10 @@ ZFPROPERTY_ON_UPDATE_DEFINE(P2World, zffloat, p2_UIScale) {
         ZFBitSet(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_UIUpdateFlag);
     }
 }
+ZFMETHOD_DEFINE_0(P2World, void, p2_UIUpdateRequest) {
+    ZFBitSet(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_UIUpdateFlag);
+}
+
 ZFMETHOD_DEFINE_0(P2World, const ZFUIRect &, p2_UIVisibleArea) {
     return _ZFP_P2World_d->visibleArea;
 }
@@ -2315,6 +2448,7 @@ void P2World::objectOnDeallocPrepare(void) {
         }
         unitList->removeAll();
 
+        _ZFP_P2World_d->bodyIdMap.clear();
         _ZFP_P2World_d->pendingBody.clear();
         _ZFP_P2World_d->pendingJoint.clear();
     }
@@ -2378,6 +2512,9 @@ static void _ZFP_P2BodyDetach(ZF_IN P2Body *body) {
     ZFCoreAssert(ownerUnit != zfnull);
     P2World *ownerWorld = ownerUnit->_ZFP_P2Unit_d->ownerWorld;
     if(ownerWorld) {
+        if(body->p2_bodyId()) {
+            ownerWorld->_ZFP_P2World_d->bodyIdMap.erase(body->p2_bodyId());
+        }
         ownerWorld->_ZFP_P2World_d->pendingBody.erase(body);
         if(B2_IS_NON_NULL(body->_ZFP_P2Body_d->implBodyId)) {
             ownerWorld->p2impl->bodyRemove(ownerWorld, body);
@@ -2483,12 +2620,29 @@ static void _ZFP_P2BodyImplCreate(ZF_IN P2World *world, ZF_IN P2Body *body) {
     implBodyDef.angularVelocity = b2RadFromZF(body->p2_rotationVelocity());
     implBodyDef.angularDamping = body->p2_rotationDamping();
     body->_ZFP_P2Body_d->implBodyId = b2CreateBody(world->_ZFP_P2World_d->implWorldId, &implBodyDef);
+    if(body->p2_bodyId()) {
+        zfimplhashmap<zfstring, P2Body *>::iterator it;
+        if(world->_ZFP_P2World_d->bodyIdMap.iterAccess(it, body->p2_bodyId())) {
+            ZFCoreCriticalMessageTrim(
+                    "body id conflict, exist body: %s, new body: %s, world: %s"
+                    , it->second
+                    , body
+                    , world
+                    );
+        }
+        it->second = body;
+    }
 
     ZFArray *shapeList = body->p2_shapeList();
     for(zfindex i = 0; i < shapeList->count(); ++i) {
         P2Shape *shape = shapeList->get(i);
         _ZFP_P2ShapePrivate::shapeCreate(body, shape);
     }
+
+    // explicitly update transform, to ensure shape and body's AABB get updated
+    b2Body_SetTransform(body->_ZFP_P2Body_d->implBodyId, b2Vec2FromZF(body->p2_position()), b2RotFromZF(body->p2_rotation()));
+    b2Body_ApplyMassFromShapes(body->_ZFP_P2Body_d->implBodyId);
+    body->_ZFP_P2Body_d->massNeedUpdate = zffalse;
 
     world->p2impl->bodyAdd(world, body);
 }
@@ -2499,8 +2653,6 @@ static void _ZFP_P2WorldImplStep_pendingBody(ZF_IN P2World *world) {
         P2Body *body = it->first;
         if(B2_IS_NULL(body->_ZFP_P2Body_d->implBodyId)) {
             _ZFP_P2BodyImplCreate(world, body);
-            b2Body_ApplyMassFromShapes(body->_ZFP_P2Body_d->implBodyId);
-            body->_ZFP_P2Body_d->massNeedUpdate = zffalse;
         }
         else {
             if(body->_ZFP_P2Body_d->massNeedUpdate) {

@@ -36,7 +36,16 @@ zfclassFwd _ZFP_P2WorldViewPrivate;
  * @endcode
  *
  * you can build 2d physics world quickly,
- * just like building #ZFUIView view tree
+ * just like building #ZFUIView view tree\n
+ * \n
+ * NOTE:
+ * -  for #P2World, origin point is at left down zero point,
+ *   and rotation is counter clockwise
+ * -  for #ZFUIView, origin point is at left top zero point,
+ *   and rotation is clockwise
+ * -  when using #P2WorldView,
+ *   you should always use methods declared in #P2World (all method name starts with `p2_`)
+ *   to manage children/body/shapes
  */
 zfclass P2WorldView : zfextend ZFUIView {
     ZFOBJECT_DECLARE(P2WorldView, ZFUIView)
