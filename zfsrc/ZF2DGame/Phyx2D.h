@@ -561,7 +561,7 @@ public:
     ZFPROPERTY_ON_UPDATE_DECLARE(P2BodyType, p2_type)
 
     /** @brief see #P2World */
-    ZFPROPERTY_ASSIGN(zfbool, p2_enable)
+    ZFPROPERTY_ASSIGN(zfbool, p2_enable, zftrue)
     ZFPROPERTY_ON_UPDATE_DECLARE(zfbool, p2_enable)
     /** @brief see #P2World */
     ZFPROPERTY_ASSIGN(zfbool, p2_sleepEnable)
