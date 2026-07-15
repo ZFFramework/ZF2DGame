@@ -7,6 +7,7 @@
 #define _ZFI_Phyx2DUIExt_h_
 
 #include "Phyx2D.h"
+#include "TileView.h"
 ZF_NAMESPACE_GLOBAL_BEGIN
 
 zfclassFwd _ZFP_P2WorldViewPrivate;
@@ -47,8 +48,47 @@ zfclassFwd _ZFP_P2WorldViewPrivate;
  *   you should always use methods declared in #P2World (all method name starts with `p2_`)
  *   to manage children/body/shapes
  */
-zfclass P2WorldView : zfextend ZFUIView {
+zfclass ZFLIB_ZF2DGame P2WorldView : zfextend ZFUIView {
     ZFOBJECT_DECLARE(P2WorldView, ZFUIView)
+
+public:
+    /**
+     * @brief tiled bg automatically updated with #P2World::p2_UIOffset
+     *
+     * by default, tiles would be updated by #P2World::p2_UIOffset,
+     * the update mode can be changed by:
+     * #tileUpdateByUI / #tileSpeed / #tileOffset,
+     * and can be checked by:
+     * #tileIsUpdateByUI / #tileIsUpdateBySpeed / #tileIsUpdateByOffset
+     */
+    ZFPROPERTY_ASSIGN(ZFCoreArray<zfautoT<TileView> >, tileBg)
+    ZFPROPERTY_ON_UPDATE_DECLARE(ZFCoreArray<zfautoT<TileView> >, tileBg)
+    /** @brief see #tileBg */
+    ZFPROPERTY_ASSIGN(ZFCoreArray<zfautoT<TileView> >, tileFg)
+    ZFPROPERTY_ON_UPDATE_DECLARE(ZFCoreArray<zfautoT<TileView> >, tileFg)
+
+    /** @brief see #tileBg, make #tileBg and #tileFg auto update by #P2World::p2_UIOffset */
+    ZFMETHOD_DECLARE_0(void, tileUpdateByUI)
+    /** @brief see #tileBg, whether #tileBg and #tileFg update by #tileUpdateByUI */
+    ZFMETHOD_DECLARE_0(zfbool, tileIsUpdateByUI)
+
+    /** @brief see #tileBg, make #tileBg and #tileFg auto update by specified speed */
+    ZFMETHOD_DECLARE_1(void, tileSpeed
+            , ZFMP_IN(const ZFUIPoint &, v)
+            )
+    /** @brief #ZFUIPointZero if not #tileIsUpdateBySpeed */
+    ZFMETHOD_DECLARE_0(ZFUIPoint, tileSpeed)
+    /** @brief see #tileBg, whether #tileBg and #tileFg update by #tileSpeed */
+    ZFMETHOD_DECLARE_0(zfbool, tileIsUpdateBySpeed)
+
+    /** @brief see #tileBg, make #tileBg and #tileFg manually update by specified offset */
+    ZFMETHOD_DECLARE_1(void, tileOffset
+            , ZFMP_IN(const ZFUIPoint &, v)
+            )
+    /** @brief #ZFUIPointZero if not #tileIsUpdateByOffset */
+    ZFMETHOD_DECLARE_0(ZFUIPoint, tileOffset)
+    /** @brief see #tileBg, whether #tileBg and #tileFg update by #tileOffset */
+    ZFMETHOD_DECLARE_0(zfbool, tileIsUpdateByOffset)
 
 protected:
     zfoverride

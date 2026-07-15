@@ -78,7 +78,7 @@ ZFEXPORT_VAR_READONLY_DEFINE(zfflags, P2FilterMaskDefault, P2FilterMaskDefault()
 static void _ZFP_P2JointAttach(ZF_IN ZFObject *jointOwner, ZF_IN P2Joint *joint);
 static void _ZFP_P2JointDetach(ZF_IN P2Joint *joint);
 static void _ZFP_P2BodyAttach(ZF_IN P2Unit *ownerUnit, ZF_IN P2Body *body);
-static void _ZFP_P2BodyDetach(ZF_IN P2Body *body);
+static void _ZFP_P2BodyDetach(ZF_IN P2Body *body, ZF_IN_OPT zfbool pendingBodyUpdate = zftrue);
 static void _ZFP_P2UnitAttach(ZF_IN P2World *ownerWorld, ZF_IN P2Unit *unit);
 static void _ZFP_P2UnitDetach(ZF_IN P2Unit *unit);
 
@@ -94,8 +94,11 @@ public:
     {
     }
 public:
-    static void shapeCreate(ZF_IN P2Body *ownerBody, ZF_IN P2Shape *shape) {
-        shape->p2impl_shapeCreate(ownerBody);
+    static ZFUIRect shapeAABBLocal(ZF_IN P2Shape *shape, ZF_IN zffloat unitScale) {
+        return shape->p2impl_AABBLocal(unitScale);
+    }
+    static void shapeCreate(ZF_IN P2Body *ownerBody, ZF_IN P2Shape *shape, ZF_IN zffloat unitScale) {
+        shape->p2impl_shapeCreate(ownerBody, unitScale);
     }
 };
 
@@ -122,6 +125,7 @@ public:
     zfimplhashmap<P2Joint *, zfbool> bodyRefJointList;
     ZFUISize bodySize; // bodySize.width==-1 if needs update
     ZFUIPoint centerOfMass; // bodySize.width==-1 if needs update, relative to bodySize
+    zfbool unitScaleNeedUpdate;
     zfbool massNeedUpdate;
 public:
     _ZFP_P2BodyPrivate(void)
@@ -130,16 +134,17 @@ public:
     , bodyRefJointList()
     , bodySize(ZFUISizeInvalid())
     , centerOfMass()
+    , unitScaleNeedUpdate(zffalse)
     , massNeedUpdate(zftrue)
     {
     }
 public:
-    ZFUIRect bodyAABBLocal(void) {
+    ZFUIRect bodyAABBLocal(ZF_IN zffloat unitScale) {
         P2Body *body = (P2Body *)b2Body_GetUserData(this->implBodyId);
         ZFCoreAssert(body);
         ZFUIRect ret = ZFUIRectZero();
         for(zfindex i = body->p2_shapeCount() - 1; i != zfindexMax(); --i) {
-            ZFUIRect shapeAABB = body->p2_shapeAt(i)->p2_AABBLocal();
+            ZFUIRect shapeAABB = _ZFP_P2ShapePrivate::shapeAABBLocal(body->p2_shapeAt(i), unitScale);
             ret = ZFUIRectUnion(ret, shapeAABB);
         }
         return ret;
@@ -150,7 +155,7 @@ public:
             this->centerOfMass = ZFUIPointZero();
         }
         else {
-            ZFUIRect bodyAABBLocal = this->bodyAABBLocal();
+            ZFUIRect bodyAABBLocal = this->bodyAABBLocal(this->ownerUnit->p2_unitScale());
             zffloat left = bodyAABBLocal.x;
             zffloat top = bodyAABBLocal.y;
             zffloat right = bodyAABBLocal.x + bodyAABBLocal.width;
@@ -468,7 +473,7 @@ ZFMETHOD_DEFINE_0(P2Shape, ZFUIRect, p2_AABBLocal) {
         return ZFUIRectZero();
     }
     else {
-        return this->p2impl_AABBLocal();
+        return this->p2impl_AABBLocal(this->p2_ownerUnit()->p2_unitScale());
     }
 }
 
@@ -534,46 +539,46 @@ ZFPROPERTY_ON_UPDATE_DEFINE(P2ShapeBox, zffloat, p2_radius) {
             , "must not be changed after added to world"
             );
 }
-static b2Polygon _ZFP_P2ShapeBox_implDef(ZF_IN P2ShapeBox *shape) {
+static b2Polygon _ZFP_P2ShapeBox_implDef(ZF_IN P2ShapeBox *shape, ZF_IN zffloat unitScale) {
     const ZFUISize &size = shape->p2_size();
     return shape->p2_position() == ZFUIPointZero() && shape->p2_rotation() == 0
         ? shape->p2_radius() == 0
             ? b2MakeBox(
-                    size.width / 2
-                    , size.height / 2
+                    size.width * unitScale / 2
+                    , size.height * unitScale / 2
                     )
             : b2MakeRoundedBox(
-                    size.width / 2
-                    , size.height / 2
-                    , shape->p2_radius()
+                    size.width * unitScale / 2
+                    , size.height * unitScale / 2
+                    , shape->p2_radius() * unitScale
                     )
         : shape->p2_radius() == 0
             ? b2MakeOffsetBox(
-                    size.width / 2
-                    , size.height / 2
-                    , b2Vec2FromZF(shape->p2_position())
+                    size.width * unitScale / 2
+                    , size.height * unitScale / 2
+                    , b2Vec2FromZF(ZFUIPointApplyScale(shape->p2_position(), unitScale))
                     , b2RotFromZF(shape->p2_rotation())
                     )
             : b2MakeOffsetRoundedBox(
-                    size.width / 2
-                    , size.height / 2
-                    , b2Vec2FromZF(shape->p2_position())
+                    size.width * unitScale / 2
+                    , size.height * unitScale / 2
+                    , b2Vec2FromZF(ZFUIPointApplyScale(shape->p2_position(), unitScale))
                     , b2RotFromZF(shape->p2_rotation())
-                    , shape->p2_radius()
+                    , shape->p2_radius() * unitScale
                     )
         ;
 }
-ZFUIRect P2ShapeBox::p2impl_AABBLocal(void) {
-    b2Polygon impl = _ZFP_P2ShapeBox_implDef(this);
+ZFUIRect P2ShapeBox::p2impl_AABBLocal(ZF_IN zffloat unitScale) {
+    b2Polygon impl = _ZFP_P2ShapeBox_implDef(this, this->p2_ownerUnit()->p2_unitScale());
     return b2AABBToZF(b2ComputePolygonAABB(&impl, b2Transform_identity));
 }
-void P2ShapeBox::p2impl_shapeCreate(ZF_IN P2Body *ownerBody) {
-    zfsuper::p2impl_shapeCreate(ownerBody);
+void P2ShapeBox::p2impl_shapeCreate(ZF_IN P2Body *ownerBody, ZF_IN zffloat unitScale) {
+    zfsuper::p2impl_shapeCreate(ownerBody, unitScale);
     ZFCoreAssert(!ZFUISizeIsEmpty(this->p2_size()));
 
     b2ShapeDef implShapeDef = b2DefaultShapeDef();
     _ZFP_P2Shape_implShapeDef(implShapeDef, this, ownerBody);
-    b2Polygon implPolygon = _ZFP_P2ShapeBox_implDef(this);
+    b2Polygon implPolygon = _ZFP_P2ShapeBox_implDef(this, unitScale);
     _ZFP_P2Shape_d->implShapeId = b2CreatePolygonShape(
             ownerBody->_ZFP_P2Body_d->implBodyId
             , &implShapeDef
@@ -592,23 +597,23 @@ ZFPROPERTY_ON_UPDATE_DEFINE(P2ShapeCircle, zffloat, p2_radius) {
             , "must not be changed after added to world"
             );
 }
-static b2Circle _ZFP_P2ShapeCircle_implDef(ZF_IN P2ShapeCircle *shape) {
+static b2Circle _ZFP_P2ShapeCircle_implDef(ZF_IN P2ShapeCircle *shape, ZF_IN zffloat unitScale) {
     b2Circle implCircle;
-    implCircle.center = b2Vec2FromZF(shape->p2_position());
-    implCircle.radius = shape->p2_radius();
+    implCircle.center = b2Vec2FromZF(ZFUIPointApplyScale(shape->p2_position(), unitScale));
+    implCircle.radius = shape->p2_radius() * unitScale;
     return implCircle;
 }
-ZFUIRect P2ShapeCircle::p2impl_AABBLocal(void) {
-    b2Circle impl = _ZFP_P2ShapeCircle_implDef(this);
+ZFUIRect P2ShapeCircle::p2impl_AABBLocal(ZF_IN zffloat unitScale) {
+    b2Circle impl = _ZFP_P2ShapeCircle_implDef(this, unitScale);
     return b2AABBToZF(b2ComputeCircleAABB(&impl, b2Transform_identity));
 }
-void P2ShapeCircle::p2impl_shapeCreate(ZF_IN P2Body *ownerBody) {
-    zfsuper::p2impl_shapeCreate(ownerBody);
+void P2ShapeCircle::p2impl_shapeCreate(ZF_IN P2Body *ownerBody, ZF_IN zffloat unitScale) {
+    zfsuper::p2impl_shapeCreate(ownerBody, unitScale);
     ZFCoreAssert(this->p2_radius() > 0);
 
     b2ShapeDef implShapeDef = b2DefaultShapeDef();
     _ZFP_P2Shape_implShapeDef(implShapeDef, this, ownerBody);
-    b2Circle implCircle = _ZFP_P2ShapeCircle_implDef(this);
+    b2Circle implCircle = _ZFP_P2ShapeCircle_implDef(this, unitScale);
     _ZFP_P2Shape_d->implShapeId = b2CreateCircleShape(
             ownerBody->_ZFP_P2Body_d->implBodyId
             , &implShapeDef
@@ -632,24 +637,24 @@ ZFPROPERTY_ON_UPDATE_DEFINE(P2ShapeCapsule, zffloat, p2_radius) {
             , "must not be changed after added to world"
             );
 }
-static b2Capsule _ZFP_P2ShapeCapsule_implDef(ZF_IN P2ShapeCapsule *shape) {
+static b2Capsule _ZFP_P2ShapeCapsule_implDef(ZF_IN P2ShapeCapsule *shape, ZF_IN zffloat unitScale) {
     b2Capsule implCapsule;
-    implCapsule.center1 = b2Vec2FromZF(shape->p2_position0());
-    implCapsule.center2 = b2Vec2FromZF(shape->p2_position1());
-    implCapsule.radius = shape->p2_radius();
+    implCapsule.center1 = b2Vec2FromZF(ZFUIPointApplyScale(shape->p2_position0(), unitScale));
+    implCapsule.center2 = b2Vec2FromZF(ZFUIPointApplyScale(shape->p2_position1(), unitScale));
+    implCapsule.radius = shape->p2_radius() * unitScale;
     return implCapsule;
 }
-ZFUIRect P2ShapeCapsule::p2impl_AABBLocal(void) {
-    b2Capsule impl = _ZFP_P2ShapeCapsule_implDef(this);
+ZFUIRect P2ShapeCapsule::p2impl_AABBLocal(ZF_IN zffloat unitScale) {
+    b2Capsule impl = _ZFP_P2ShapeCapsule_implDef(this, unitScale);
     return b2AABBToZF(b2ComputeCapsuleAABB(&impl, b2Transform_identity));
 }
-void P2ShapeCapsule::p2impl_shapeCreate(ZF_IN P2Body *ownerBody) {
-    zfsuper::p2impl_shapeCreate(ownerBody);
+void P2ShapeCapsule::p2impl_shapeCreate(ZF_IN P2Body *ownerBody, ZF_IN zffloat unitScale) {
+    zfsuper::p2impl_shapeCreate(ownerBody, unitScale);
     ZFCoreAssert(this->p2_radius() > 0);
 
     b2ShapeDef implShapeDef = b2DefaultShapeDef();
     _ZFP_P2Shape_implShapeDef(implShapeDef, this, ownerBody);
-    b2Capsule implCapsule = _ZFP_P2ShapeCapsule_implDef(this);
+    b2Capsule implCapsule = _ZFP_P2ShapeCapsule_implDef(this, unitScale);
     _ZFP_P2Shape_d->implShapeId = b2CreateCapsuleShape(
             ownerBody->_ZFP_P2Body_d->implBodyId
             , &implShapeDef
@@ -674,8 +679,19 @@ ZFMETHOD_DEFINE_4(P2ShapePolygon, void, p2_polygon
     this->p2_polygon_rotation(rotation);
     this->p2_polygon_radius(radius);
 }
-static b2Polygon _ZFP_P2ShapePolygon_implDef(ZF_IN P2ShapePolygon *shape) {
-    b2Hull implHull = b2ComputeHull((const b2Vec2 *)(shape->p2_polygon_points().arrayBuf()), (int)shape->p2_polygon_points().count());
+static b2Polygon _ZFP_P2ShapePolygon_implDef(ZF_IN P2ShapePolygon *shape, ZF_IN zffloat unitScale) {
+    b2Hull implHull;
+    if(unitScale != 1) {
+        ZFCoreArray<ZFUIPoint> points;
+        points.resize(shape->p2_polygon_points().count());
+        for(zfindex i = 0; i < points.count(); ++i) {
+            points[i] = ZFUIPointApplyScale(shape->p2_polygon_points()[i], unitScale);
+        }
+        implHull = b2ComputeHull((const b2Vec2 *)(points.arrayBuf()), (int)points.count());
+    }
+    else {
+        implHull = b2ComputeHull((const b2Vec2 *)(shape->p2_polygon_points().arrayBuf()), (int)shape->p2_polygon_points().count());
+    }
     ZFCoreAssertWithMessageTrim(implHull.count > 0
             , "invalid polygon points, shape: %s"
             , shape->p2_polygon_points().objectInfoOfContent()
@@ -684,27 +700,27 @@ static b2Polygon _ZFP_P2ShapePolygon_implDef(ZF_IN P2ShapePolygon *shape) {
     return shape->p2_polygon_position() == ZFUIPointZero() && shape->p2_polygon_rotation() == 0
         ? b2MakePolygon(
                 &implHull
-                , shape->p2_polygon_radius()
+                , shape->p2_polygon_radius() * unitScale
                 )
         : b2MakeOffsetRoundedPolygon(
                 &implHull
-                , b2Vec2FromZF(shape->p2_polygon_position())
+                , b2Vec2FromZF(ZFUIPointApplyScale(shape->p2_polygon_position(), unitScale))
                 , b2RotFromZF(shape->p2_polygon_rotation())
-                , shape->p2_polygon_radius()
+                , shape->p2_polygon_radius() * unitScale
                 )
         ;
 }
-ZFUIRect P2ShapePolygon::p2impl_AABBLocal(void) {
-    b2Polygon impl = _ZFP_P2ShapePolygon_implDef(this);
+ZFUIRect P2ShapePolygon::p2impl_AABBLocal(ZF_IN zffloat unitScale) {
+    b2Polygon impl = _ZFP_P2ShapePolygon_implDef(this, unitScale);
     return b2AABBToZF(b2ComputePolygonAABB(&impl, b2Transform_identity));
 }
-void P2ShapePolygon::p2impl_shapeCreate(ZF_IN P2Body *ownerBody) {
-    zfsuper::p2impl_shapeCreate(ownerBody);
+void P2ShapePolygon::p2impl_shapeCreate(ZF_IN P2Body *ownerBody, ZF_IN zffloat unitScale) {
+    zfsuper::p2impl_shapeCreate(ownerBody, unitScale);
     ZFCoreAssert(!this->p2_polygon_points().isEmpty());
 
     b2ShapeDef implShapeDef = b2DefaultShapeDef();
     _ZFP_P2Shape_implShapeDef(implShapeDef, this, ownerBody);
-    b2Polygon implPolygon = _ZFP_P2ShapePolygon_implDef(this);
+    b2Polygon implPolygon = _ZFP_P2ShapePolygon_implDef(this, unitScale);
     _ZFP_P2Shape_d->implShapeId = b2CreatePolygonShape(
             ownerBody->_ZFP_P2Body_d->implBodyId
             , &implShapeDef
@@ -1492,7 +1508,7 @@ ZFMETHOD_DEFINE_1(P2Body, void, p2_shape
     this->p2_shapeList()->add(shape);
     _ZFP_P2Body_d->bodySize.width = -1;
     if(B2_IS_NON_NULL(_ZFP_P2Body_d->implBodyId)) {
-        _ZFP_P2ShapePrivate::shapeCreate(this, shape);
+        _ZFP_P2ShapePrivate::shapeCreate(this, shape, this->p2_ownerUnit()->p2_unitScale());
         _ZFP_P2BodyImplMassUpdateRequest(this);
     }
 }
@@ -1679,7 +1695,7 @@ ZFMETHOD_DEFINE_0(P2Body, ZFUIRect, p2_AABB) {
 }
 ZFMETHOD_DEFINE_0(P2Body, ZFUIRect, p2_AABBLocal) {
     if(B2_IS_NON_NULL(_ZFP_P2Body_d->implBodyId)) {
-        return _ZFP_P2Body_d->bodyAABBLocal();
+        return _ZFP_P2Body_d->bodyAABBLocal(this->p2_ownerUnit()->p2_unitScale());
     }
     else {
         return ZFUIRectZero();
@@ -1859,6 +1875,30 @@ ZFMETHOD_DEFINE_0(P2Unit, void, p2_unitRemoveLater) {
             , this
             );
     _ZFP_P2Unit_d->ownerWorld->_ZFP_P2World_d->unitRemoveLater[this] = zftrue;
+}
+
+ZFPROPERTY_ON_UPDATE_DEFINE(P2Unit, zffloat, p2_unitScale) {
+    if(propertyValue <= 0) {
+        propertyValue = 1;
+    }
+    if(propertyValue != propertyValueOld) {
+        if(this->p2_body()) {
+            this->p2_body()->_ZFP_P2Body_d->unitScaleNeedUpdate = zftrue;
+            this->p2_body()->_ZFP_P2Body_d->bodySize.width = -1;
+            if(_ZFP_P2Unit_d->ownerWorld) {
+                _ZFP_P2Unit_d->ownerWorld->_ZFP_P2World_d->pendingBody[this->p2_body()] = zftrue;
+            }
+        }
+        ZFArray *partList = this->p2_partList();
+        for(zfindex i = partList->count() - 1; i != zfindexMax(); --i) {
+            P2Body *part = partList->get(i);
+            part->_ZFP_P2Body_d->unitScaleNeedUpdate = zftrue;
+            part->_ZFP_P2Body_d->bodySize.width = -1;
+            if(_ZFP_P2Unit_d->ownerWorld) {
+                _ZFP_P2Unit_d->ownerWorld->_ZFP_P2World_d->pendingBody[part] = zftrue;
+            }
+        }
+    }
 }
 
 ZFPROPERTY_ON_ATTACH_DEFINE(P2Unit, P2Body *, p2_body) {
@@ -2507,7 +2547,7 @@ static void _ZFP_P2BodyAttach(ZF_IN P2Unit *ownerUnit, ZF_IN P2Body *body) {
         ownerUnit->_ZFP_P2Unit_d->ownerWorld->_ZFP_P2World_d->pendingBody[body];
     }
 }
-static void _ZFP_P2BodyDetach(ZF_IN P2Body *body) {
+static void _ZFP_P2BodyDetach(ZF_IN P2Body *body, ZF_IN_OPT zfbool pendingBodyUpdate /* = zftrue */) {
     P2Unit *ownerUnit = body->_ZFP_P2Body_d->ownerUnit;
     ZFCoreAssert(ownerUnit != zfnull);
     P2World *ownerWorld = ownerUnit->_ZFP_P2Unit_d->ownerWorld;
@@ -2515,7 +2555,9 @@ static void _ZFP_P2BodyDetach(ZF_IN P2Body *body) {
         if(body->p2_bodyId()) {
             ownerWorld->_ZFP_P2World_d->bodyIdMap.erase(body->p2_bodyId());
         }
-        ownerWorld->_ZFP_P2World_d->pendingBody.erase(body);
+        if(pendingBodyUpdate) {
+            ownerWorld->_ZFP_P2World_d->pendingBody.erase(body);
+        }
         if(B2_IS_NON_NULL(body->_ZFP_P2Body_d->implBodyId)) {
             ownerWorld->p2impl->bodyRemove(ownerWorld, body);
 
@@ -2633,10 +2675,11 @@ static void _ZFP_P2BodyImplCreate(ZF_IN P2World *world, ZF_IN P2Body *body) {
         it->second = body;
     }
 
+    zffloat unitScale = body->_ZFP_P2Body_d->ownerUnit->p2_unitScale();
     ZFArray *shapeList = body->p2_shapeList();
     for(zfindex i = 0; i < shapeList->count(); ++i) {
         P2Shape *shape = shapeList->get(i);
-        _ZFP_P2ShapePrivate::shapeCreate(body, shape);
+        _ZFP_P2ShapePrivate::shapeCreate(body, shape, unitScale);
     }
 
     b2Body_ApplyMassFromShapes(body->_ZFP_P2Body_d->implBodyId);
@@ -2649,6 +2692,12 @@ static void _ZFP_P2WorldImplStep_pendingBody(ZF_IN P2World *world) {
     zfimplhashmap<P2Body *, zfbool> &pendingBody = world->_ZFP_P2World_d->pendingBody;
     for(zfimplhashmap<P2Body *, zfbool>::iterator it = pendingBody.begin(); it != pendingBody.end(); ++it) {
         P2Body *body = it->first;
+        if(body->_ZFP_P2Body_d->unitScaleNeedUpdate) {
+            body->_ZFP_P2Body_d->unitScaleNeedUpdate = zffalse;
+            P2Unit *ownerUnit = body->_ZFP_P2Body_d->ownerUnit;
+            _ZFP_P2BodyDetach(body, zffalse);
+            body->_ZFP_P2Body_d->ownerUnit = ownerUnit;
+        }
         if(B2_IS_NULL(body->_ZFP_P2Body_d->implBodyId)) {
             _ZFP_P2BodyImplCreate(world, body);
         }
