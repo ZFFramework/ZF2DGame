@@ -1,4 +1,6 @@
 <ZF_SH> "<ZF_ROOT_PATH>\tools\common\git_check.<ZF_SH_EXT>" "https://github.com/erincatto/box2d" v3.1.1 "<ZF_WORK_DIR>\_repo\box2d"
-<ZF_SH> "<ZF_ROOT_PATH>\tools\common\copy_check.<ZF_SH_EXT>" "<ZF_WORK_DIR>\_repo\box2d\include\box2d" "<ZF_WORK_DIR>\..\zfsrc_ext\ZFImpl\_repo\box2d\box2d"
-<ZF_SH> "<ZF_ROOT_PATH>\tools\common\copy_check.<ZF_SH_EXT>" "<ZF_WORK_DIR>\_repo\box2d\src" "<ZF_WORK_DIR>\..\zfsrc_ext\ZFImpl\_repo\box2d"
+<ZF_SH> "<ZF_ROOT_PATH>\tools\common\copy_check.<ZF_SH_EXT>" "<ZF_WORK_DIR>\_repo\box2d\include\box2d" "<ZF_WORK_DIR>\_tmp\box2d\box2d"
+<ZF_SH> "<ZF_ROOT_PATH>\tools\common\copy_check.<ZF_SH_EXT>" "<ZF_WORK_DIR>\_repo\box2d\src" "<ZF_WORK_DIR>\_tmp\box2d"
+<ZF_SH> "<ZF_ROOT_PATH>\tools\common\file_merge.<ZF_SH_EXT>" "<ZF_WORK_DIR>\_tmp\box2d\box2d\base.h" "<ZF_WORK_DIR>\zfautoscript_zf3rd_setup_box2d_header_prefix.h" "<ZF_WORK_DIR>\_repo\box2d\include\box2d\base.h"
+<ZF_SH> "<ZF_ROOT_PATH>\tools\common\copy_check.<ZF_SH_EXT>" "<ZF_WORK_DIR>\_tmp\box2d" "<ZF_WORK_DIR>\..\zfsrc_ext\ZFImpl\_repo\box2d"
 
