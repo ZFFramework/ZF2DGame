@@ -261,7 +261,6 @@ zfclassNotPOD _ZFP_P2WorldPrivate {
 public:
     b2WorldId implWorldId;
     ZFListener implTimer;
-    zfimplhashmap<zfstring, P2Body *> bodyIdMap; // cache for finding
     zfimplhashmap<P2Body *, zfbool> pendingBody; // bodies needs to create or update mass
     zfimplhashmap<P2Joint *, zfbool> pendingJoint; // joints needs to create or update body
     P2BodyMoveEvent *bodyMoveEvent;
@@ -310,6 +309,25 @@ public:
         zfobjRelease(contactEvent);
         zfobjRelease(sensorEvent);
         zfobjRelease(bodyMoveEvent);
+    }
+public:
+    static P2Body *bodyFind(
+            ZF_IN P2World *world
+            , ZF_IN const zfstring &bodyId
+            ) {
+        zfindex dotPos = zfstringFind(bodyId, ".");
+        if(dotPos == zfindexMax()) {
+            return world->p2_bodyFind(bodyId);
+        }
+        else {
+            P2Unit *unit = world->p2_unitFind(zfstring::shared(bodyId, dotPos));
+            if(unit) {
+                return unit->p2_bodyFind(zfstring::shared(bodyId.cString() + dotPos + 1, bodyId.length() - dotPos - 1));
+            }
+            else {
+                return zfnull;
+            }
+        }
     }
 };
 static zfuint _ZFP_P2World_stateFlag = 0;
@@ -2311,9 +2329,13 @@ ZFMETHOD_DEFINE_1(P2World, P2Body *, p2_bodyFind
         , ZFMP_IN(const zfstring &, bodyId)
         ) {
     if(bodyId) {
-        zfimplhashmap<zfstring, P2Body *>::iterator it = _ZFP_P2World_d->bodyIdMap.find(bodyId);
-        if(it != _ZFP_P2World_d->bodyIdMap.end()) {
-            return it->second;
+        ZFArray *unitList = this->p2_unitList();
+        for(zfindex i = unitList->count() - 1; i != zfindexMax(); --i) {
+            P2Unit *unit = unitList->get(i);
+            P2Body *body = unit->p2_bodyFind(bodyId);
+            if(body) {
+                return body;
+            }
         }
     }
     return zfnull;
@@ -2488,7 +2510,6 @@ void P2World::objectOnDeallocPrepare(void) {
         }
         unitList->removeAll();
 
-        _ZFP_P2World_d->bodyIdMap.clear();
         _ZFP_P2World_d->pendingBody.clear();
         _ZFP_P2World_d->pendingJoint.clear();
     }
@@ -2552,9 +2573,6 @@ static void _ZFP_P2BodyDetach(ZF_IN P2Body *body, ZF_IN_OPT zfbool pendingBodyUp
     ZFCoreAssert(ownerUnit != zfnull);
     P2World *ownerWorld = ownerUnit->_ZFP_P2Unit_d->ownerWorld;
     if(ownerWorld) {
-        if(body->p2_bodyId()) {
-            ownerWorld->_ZFP_P2World_d->bodyIdMap.erase(body->p2_bodyId());
-        }
         if(pendingBodyUpdate) {
             ownerWorld->_ZFP_P2World_d->pendingBody.erase(body);
         }
@@ -2662,18 +2680,6 @@ static void _ZFP_P2BodyImplCreate(ZF_IN P2World *world, ZF_IN P2Body *body) {
     implBodyDef.angularVelocity = b2RadFromZF(body->p2_rotationVelocity());
     implBodyDef.angularDamping = body->p2_rotationDamping();
     body->_ZFP_P2Body_d->implBodyId = b2CreateBody(world->_ZFP_P2World_d->implWorldId, &implBodyDef);
-    if(body->p2_bodyId()) {
-        zfimplhashmap<zfstring, P2Body *>::iterator it;
-        if(world->_ZFP_P2World_d->bodyIdMap.iterAccess(it, body->p2_bodyId())) {
-            ZFCoreCriticalMessageTrim(
-                    "body id conflict, exist body: %s, new body: %s, world: %s"
-                    , it->second
-                    , body
-                    , world
-                    );
-        }
-        it->second = body;
-    }
 
     zffloat unitScale = body->_ZFP_P2Body_d->ownerUnit->p2_unitScale();
     ZFArray *shapeList = body->p2_shapeList();
@@ -2726,8 +2732,8 @@ static void _ZFP_P2WorldImplStep_pendingJoint(ZF_IN P2World *world) {
         P2Body *ownerBody0 = zfnull;
         P2Body *ownerBody1 = zfnull;
         if(joint->_ZFP_P2Joint_d->jointOwner == world) {
-            ownerBody0 = world->p2_bodyFind(joint->p2_bodyId0());
-            ownerBody1 = world->p2_bodyFind(joint->p2_bodyId1());
+            ownerBody0 = _ZFP_P2WorldPrivate::bodyFind(world, joint->p2_bodyId0());
+            ownerBody1 = _ZFP_P2WorldPrivate::bodyFind(world, joint->p2_bodyId1());
         }
         else {
             P2Unit *unit = zfcast(P2Unit *, joint->_ZFP_P2Joint_d->jointOwner);
@@ -2737,11 +2743,11 @@ static void _ZFP_P2WorldImplStep_pendingJoint(ZF_IN P2World *world) {
             }
         }
         if(ownerBody0 == zfnull) {
-            ZFLogTrim("P2Joint: no body found, bodyId0: %s, owner: %s, joint: %s", joint->p2_bodyId0(), joint, joint->_ZFP_P2Joint_d->jointOwner);
+            ZFLogTrim("P2Joint: no body found, bodyId0: %s, joint: %s, owner: %s", joint->p2_bodyId0(), joint, joint->_ZFP_P2Joint_d->jointOwner);
             continue;
         }
         if(ownerBody1 == zfnull) {
-            ZFLogTrim("P2Joint: no body found, bodyId1: %s, owner: %s, joint: %s", joint->p2_bodyId1(), joint, joint->_ZFP_P2Joint_d->jointOwner);
+            ZFLogTrim("P2Joint: no body found, bodyId1: %s, joint: %s, owner: %s", joint->p2_bodyId1(), joint, joint->_ZFP_P2Joint_d->jointOwner);
             continue;
         }
         _ZFP_P2JointPrivate::jointCreate(ownerBody0, ownerBody1, joint);

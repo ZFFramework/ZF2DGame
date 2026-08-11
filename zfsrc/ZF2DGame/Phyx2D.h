@@ -103,6 +103,10 @@ protected:
     virtual void objectOnInit(void);
     zfoverride
     virtual void objectOnDealloc(void);
+    zfoverride
+    virtual void objectInfoImpl(ZF_IN_OUT zfstring &ret) {
+        ZFObjectPrettyInfoT(ret, this);
+    }
 
 public:
     _ZFP_P2ShapePrivate *_ZFP_P2Shape_d;
@@ -233,6 +237,10 @@ protected:
     virtual void objectOnInit(void);
     zfoverride
     virtual void objectOnDealloc(void);
+    zfoverride
+    virtual void objectInfoImpl(ZF_IN_OUT zfstring &ret) {
+        ZFObjectPrettyInfoT(ret, this);
+    }
 
 public:
     _ZFP_P2JointPrivate *_ZFP_P2Joint_d;
@@ -1109,7 +1117,15 @@ public:
 
     /** @brief see #P2World, must not manually modify */
     ZFPROPERTY_RETAIN_READONLY(ZFArray *, p2_jointList, zfobj<ZFArray>())
-    /** @brief see #P2World */
+    /**
+     * @brief see #P2World
+     *
+     * note, when adding joint to world (instead of adding to #P2Unit::p2_joint),
+     * #P2Joint::p2_jointId can be:
+     * -  `bodyId` : you should ensure the bodyId is unique in the world
+     * -  `unitId.bodyId` : first find by `unitId`, then find inside the unit by `bodyId`,
+     *   this is the recommended way to improve searching performance
+     */
     ZFMETHOD_DECLARE_1(void, p2_joint
             , ZFMP_IN(P2Joint *, joint)
             )
