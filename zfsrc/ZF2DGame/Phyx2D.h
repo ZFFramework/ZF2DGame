@@ -61,17 +61,17 @@ public:
     /** @brief see #P2World, what category this shape is */
     ZFPROPERTY_ASSIGN(zfflags, p2_filterCategory, P2FilterCategoryDefault())
     ZFPROPERTY_ON_UPDATE_DECLARE(zfflags, p2_filterCategory)
-    /** @brief see #P2World, what type should be collided with this shape */
+    /** @brief see #P2World, what type should be contact with this shape */
     ZFPROPERTY_ASSIGN(zfflags, p2_filterMask, P2FilterMaskDefault())
     ZFPROPERTY_ON_UPDATE_DECLARE(zfflags, p2_filterMask)
-    /** @brief see #P2World, always collide (>0) or never collide (<0) within same group */
+    /** @brief see #P2World, always contact (>0) or never contact (<0) within same group */
     ZFPROPERTY_ASSIGN(zfint, p2_filterGroup, 0)
     ZFPROPERTY_ON_UPDATE_DECLARE(zfint, p2_filterGroup)
 
     /** @brief see #P2World, range in [0, 1] */
     ZFPROPERTY_ASSIGN(zffloat, p2_matFriction, 0.6f)
     ZFPROPERTY_ON_UPDATE_DECLARE(zffloat, p2_matFriction)
-    /** @brief see #P2World, range in [0, 1], how much to bounce when collide */
+    /** @brief see #P2World, range in [0, 1], how much to bounce when contact */
     ZFPROPERTY_ASSIGN(zffloat, p2_matBounce, 0.05f)
     ZFPROPERTY_ON_UPDATE_DECLARE(zffloat, p2_matBounce)
     /** @brief see #P2World, range in [0, 1] */
@@ -85,7 +85,7 @@ public:
      * -  [1, 10] : conveyor belt, from low to high speed
      * -  <0 : reverse
      */
-    ZFPROPERTY_ASSIGN(zffloat, p2_matTangentSpeed, 1)
+    ZFPROPERTY_ASSIGN(zffloat, p2_matTangentSpeed)
     ZFPROPERTY_ON_UPDATE_DECLARE(zffloat, p2_matTangentSpeed)
 
 public:
@@ -221,8 +221,8 @@ public:
     ZFPROPERTY_ASSIGN(zfstring, p2_bodyId1)
 
     /** @brief see #P2World */
-    ZFPROPERTY_ASSIGN(zfbool, p2_collideEnable)
-    ZFPROPERTY_ON_UPDATE_DECLARE(zfbool, p2_collideEnable)
+    ZFPROPERTY_ASSIGN(zfbool, p2_contactEnable)
+    ZFPROPERTY_ON_UPDATE_DECLARE(zfbool, p2_contactEnable)
 
 protected:
     /** @brief init with body id */

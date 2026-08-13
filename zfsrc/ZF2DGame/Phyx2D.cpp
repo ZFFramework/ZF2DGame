@@ -793,7 +793,7 @@ ZFMETHOD_DEFINE_0(P2Joint, void, p2_jointRemoveLater) {
     }
 }
 
-ZFPROPERTY_ON_UPDATE_DEFINE(P2Joint, zfbool, p2_collideEnable) {
+ZFPROPERTY_ON_UPDATE_DEFINE(P2Joint, zfbool, p2_contactEnable) {
     if(B2_IS_NON_NULL(_ZFP_P2Joint_d->implJointId)) {
         b2Joint_SetCollideConnected(_ZFP_P2Joint_d->implJointId, propertyValue);
     }
@@ -934,7 +934,7 @@ void P2JointDistance::p2impl_jointCreate(ZF_IN P2Body *ownerBody0, ZF_IN P2Body 
     b2DistanceJointDef implJointDef = b2DefaultDistanceJointDef();
     implJointDef.bodyIdA = ownerBody0->_ZFP_P2Body_d->implBodyId;
     implJointDef.bodyIdB = ownerBody1->_ZFP_P2Body_d->implBodyId;
-    implJointDef.collideConnected = this->p2_collideEnable();
+    implJointDef.collideConnected = this->p2_contactEnable();
     implJointDef.localAnchorA = b2Vec2FromZF(this->p2_anchor0());
     implJointDef.localAnchorB = b2Vec2FromZF(this->p2_anchor1());
     if(this->p2_springHertz() > 0 && this->p2_springDamping() > 0) {
@@ -1067,7 +1067,7 @@ void P2JointRevolute::p2impl_jointCreate(ZF_IN P2Body *ownerBody0, ZF_IN P2Body 
     b2RevoluteJointDef implJointDef = b2DefaultRevoluteJointDef();
     implJointDef.bodyIdA = ownerBody0->_ZFP_P2Body_d->implBodyId;
     implJointDef.bodyIdB = ownerBody1->_ZFP_P2Body_d->implBodyId;
-    implJointDef.collideConnected = this->p2_collideEnable();
+    implJointDef.collideConnected = this->p2_contactEnable();
     implJointDef.localAnchorA = b2Vec2FromZF(this->p2_anchor0());
     implJointDef.localAnchorB = b2Vec2FromZF(this->p2_anchor1());
     if(this->p2_springHertz() > 0 && this->p2_springDamping() > 0) {
@@ -1193,7 +1193,7 @@ void P2JointPrismatic::p2impl_jointCreate(ZF_IN P2Body *ownerBody0, ZF_IN P2Body
     b2PrismaticJointDef implJointDef = b2DefaultPrismaticJointDef();
     implJointDef.bodyIdA = ownerBody0->_ZFP_P2Body_d->implBodyId;
     implJointDef.bodyIdB = ownerBody1->_ZFP_P2Body_d->implBodyId;
-    implJointDef.collideConnected = this->p2_collideEnable();
+    implJointDef.collideConnected = this->p2_contactEnable();
     implJointDef.localAnchorA = b2Vec2FromZF(this->p2_anchor0());
     implJointDef.localAnchorB = b2Vec2FromZF(this->p2_anchor1());
     if(this->p2_springHertz() > 0 && this->p2_springDamping() > 0) {
@@ -1302,7 +1302,7 @@ void P2JointWheel::p2impl_jointCreate(ZF_IN P2Body *ownerBody0, ZF_IN P2Body *ow
     b2WheelJointDef implJointDef = b2DefaultWheelJointDef();
     implJointDef.bodyIdA = ownerBody0->_ZFP_P2Body_d->implBodyId;
     implJointDef.bodyIdB = ownerBody1->_ZFP_P2Body_d->implBodyId;
-    implJointDef.collideConnected = this->p2_collideEnable();
+    implJointDef.collideConnected = this->p2_contactEnable();
     implJointDef.localAnchorA = b2Vec2FromZF(this->p2_anchor0());
     implJointDef.localAnchorB = b2Vec2FromZF(this->p2_anchor1());
     if(this->p2_springHertz() > 0 && this->p2_springDamping() > 0) {
@@ -1392,7 +1392,7 @@ void P2JointMotor::p2impl_jointCreate(ZF_IN P2Body *ownerBody0, ZF_IN P2Body *ow
     b2MotorJointDef implJointDef = b2DefaultMotorJointDef();
     implJointDef.bodyIdA = ownerBody0->_ZFP_P2Body_d->implBodyId;
     implJointDef.bodyIdB = ownerBody1->_ZFP_P2Body_d->implBodyId;
-    implJointDef.collideConnected = this->p2_collideEnable();
+    implJointDef.collideConnected = this->p2_contactEnable();
 
     implJointDef.correctionFactor = this->p2_motorFactor();
     implJointDef.maxForce = this->p2_motorForce();
@@ -1450,7 +1450,7 @@ void P2JointWeld::p2impl_jointCreate(ZF_IN P2Body *ownerBody0, ZF_IN P2Body *own
     b2WeldJointDef implJointDef = b2DefaultWeldJointDef();
     implJointDef.bodyIdA = ownerBody0->_ZFP_P2Body_d->implBodyId;
     implJointDef.bodyIdB = ownerBody1->_ZFP_P2Body_d->implBodyId;
-    implJointDef.collideConnected = this->p2_collideEnable();
+    implJointDef.collideConnected = this->p2_contactEnable();
 
     implJointDef.localAnchorA = b2Vec2FromZF(this->p2_anchor0());
     implJointDef.localAnchorB = b2Vec2FromZF(this->p2_anchor1());
@@ -2628,7 +2628,11 @@ static void _ZFP_P2UnitDetach(ZF_IN P2Unit *unit) {
     if(unit->_ZFP_P2Unit_d->ownerWorld) {
         unit->_ZFP_P2Unit_d->ownerWorld->_ZFP_P2World_d->visibleUnits.erase(unit);
         unit->_ZFP_P2Unit_d->ownerWorld->_ZFP_P2World_d->visibleUnitsPrev.erase(unit);
-        unit->_ZFP_P2Unit_d->ownerWorld = zfnull;
+    }
+
+    ZFArray *jointList = unit->p2_jointList();
+    for(zfindex i = jointList->count() - 1; i != zfindexMax(); --i) {
+        _ZFP_P2JointDetach(jointList->get(i));
     }
 
     _ZFP_P2BodyDetach(unit->p2_body());
@@ -2636,10 +2640,8 @@ static void _ZFP_P2UnitDetach(ZF_IN P2Unit *unit) {
     for(zfindex i = partList->count() - 1; i != zfindexMax(); --i) {
         _ZFP_P2BodyDetach(partList->get(i));
     }
-    ZFArray *jointList = unit->p2_jointList();
-    for(zfindex i = jointList->count() - 1; i != zfindexMax(); --i) {
-        _ZFP_P2JointDetach(jointList->get(i));
-    }
+
+    unit->_ZFP_P2Unit_d->ownerWorld = zfnull;
 }
 
 static void _ZFP_P2BodyImplMassUpdateRequest(ZF_IN P2Body *body) {
