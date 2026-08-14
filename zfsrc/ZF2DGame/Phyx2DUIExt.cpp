@@ -1,5 +1,7 @@
 #include "Phyx2DUIExt.h"
 
+#include <cmath> // for coordinate conv
+
 ZF_NAMESPACE_GLOBAL_BEGIN
 
 ZFCLASS_EXTEND(P2WorldView, P2World)
@@ -120,24 +122,63 @@ public:
         }
     }
 private:
-    void _bodyPosUpdate(ZF_IN P2Body *body, ZF_IN ZFUIView *bodyView, ZF_IN const ZFUIPoint &position, ZF_IN zffloat rotation) {
-        bodyView->rotateZ(360 - rotation);
+    static void _coordinateConv(
+            // coordinate in UI, origin is at left top
+            ZF_OUT zffloat &Nx // x,y to left top
+            , ZF_OUT zffloat &Ny
+            , ZF_OUT zffloat &Nw // w,h of the object
+            , ZF_OUT zffloat &Nh
+            , ZF_OUT zffloat &Nr // rotation in degree, clockwise
+            // coordinate in physics world, origin is at left bottom
+            , ZF_IN zffloat const &x // x,y to left bottom
+            , ZF_IN zffloat const &y
+            , ZF_IN zffloat const &w // w,h of the object
+            , ZF_IN zffloat const &h
+            , ZF_IN zffloat const &cx // mass center to object left bottom
+            , ZF_IN zffloat const &cy
+            , ZF_IN zffloat const &r // rotation in degree, clockwise
+            , ZF_IN zffloat const &s // scale = UI_size_unit / physics_size_unit
+            , ZF_IN zffloat const &H // physics world height
+            , ZF_IN zffloat const &ox // additional offset of physics world
+            , ZF_IN zffloat const &oy // additional offset of physics world
+            ) {
+        zffloat dx = w / 2 - cx;
+        zffloat dy = h / 2 - cy;
+        zffloat rt = r * (zffloat)M_PI / 180;
+        zffloat cr = cos(rt);
+        zffloat sr = sin(rt);
 
+        Nx = (x + (dx * cr + dy * sr) - w / 2 - ox) * s;
+        Ny = (H - (y + (-dx * sr + dy * cr)) - h / 2 - oy) * s;
+        Nw = w * s;
+        Nh = h * s;
+        Nr = r;
+    }
+    void _bodyPosUpdate(ZF_IN P2Body *body, ZF_IN ZFUIView *bodyView, ZF_IN const ZFUIPoint &position, ZF_IN zffloat rotation) {
         zffloat unitScale = body->p2_ownerUnit()->p2_unitScale();
         const ZFUIPoint &UIOffset = world->p2_UIOffset();
-        zffloat UIScale = world->p2_UIScale();
         ZFUIPoint centerOfMass = ZFUIPointApplyScaleReversely(body->p2_centerOfMass(), unitScale);
-        ZFUISize bodySize = ZFUISizeApplyScaleReversely(body->p2_bodySize(), unitScale);
+        ZFUIRect aabb = ZFUIRectApplyScaleReversely(body->p2_AABBLocal(), unitScale);
+
+        zffloat Nx, Ny, Nw, Nh, Nr;
+        _coordinateConv(
+                Nx, Ny, Nw, Nh, Nr
+                , position.x
+                , position.y
+                , aabb.width
+                , aabb.height
+                , centerOfMass.x - aabb.x
+                , centerOfMass.y - aabb.y
+                , rotation
+                , world->p2_UIScale()
+                , worldView->height() / world->p2_UIScale()
+                , UIOffset.x
+                , UIOffset.y
+                );
 
         bodyView->UIScale(unitScale);
-        bodyView->viewFrame(ZFUIRectCreate(
-                    (position.x - UIOffset.x) * UIScale
-                    , worldView->height() - (position.y - centerOfMass.y + bodySize.height / 2) * UIScale
-                    , bodySize.width * UIScale
-                    , bodySize.height * UIScale
-                    ));
-        bodyView->translateX((centerOfMass.x - bodySize.width / 2) * UIScale);
-        bodyView->translateY(0 - (centerOfMass.y - bodySize.height / 2) * UIScale);
+        bodyView->rotateZ(Nr);
+        bodyView->viewFrame(ZFUIRectCreate(Nx, Ny, Nw, Nh));
     }
 };
 

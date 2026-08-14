@@ -40,8 +40,6 @@ public:
     ZFMETHOD_DECLARE_0(P2Unit *, p2_ownerUnit)
     /** @brief see #P2World */
     ZFMETHOD_DECLARE_0(P2World *, p2_ownerWorld)
-    /** @brief see #P2World */
-    ZFMETHOD_DECLARE_0(void, p2_shapeRemoveLater)
 
 public:
     /** @brief see #P2World */
@@ -208,8 +206,6 @@ public:
     ZFMETHOD_DECLARE_0(P2Body *, p2_ownerBody1)
     /** @brief see #P2World */
     ZFMETHOD_DECLARE_0(P2World *, p2_ownerWorld)
-    /** @brief see #P2World */
-    ZFMETHOD_DECLARE_0(void, p2_jointRemoveLater)
 
 public:
     /** @brief see #P2World */
@@ -501,22 +497,6 @@ public:
     ZFMETHOD_DECLARE_0(P2Unit *, p2_ownerUnit)
     /** @brief see #P2World */
     ZFMETHOD_DECLARE_0(P2World *, p2_ownerWorld)
-    /**
-     * @brief remove this body after current simulation step,
-     *   if this body is the main #P2Unit::p2_body of an unit,
-     *   then the entire unit would be removed instead
-     *
-     * shape/body/unit may be removed during simulation step
-     * (during callback of app code, #P2World::p2impl_contactEvent for example),
-     * causing #P2SensorEventData or #P2ContactEventData's shape to be null,
-     * which is not expected\n
-     * to make things easier,
-     * you may use this method to remove things (instead of #P2World::p2_unitRemove),
-     * so that they would be removed after your logical code
-     */
-    ZFMETHOD_DECLARE_0(void, p2_bodyRemoveLater)
-    /** @brief see #P2World */
-    ZFMETHOD_DECLARE_0(void, p2_unitRemoveLater)
 
     /** @brief see #P2World */
     ZFPROPERTY_RETAIN_READONLY(ZFArray *, p2_shapeList, zfobj<ZFArray>())
@@ -770,8 +750,6 @@ public:
 public:
     /** @brief see #P2World */
     ZFMETHOD_DECLARE_0(P2World *, p2_ownerWorld)
-    /** @brief see #P2World */
-    ZFMETHOD_DECLARE_0(void, p2_unitRemoveLater)
 
 public:
     /** @brief see #P2World */
@@ -912,9 +890,9 @@ public:
 /** @brief see #P2World */
 zfclassPOD ZFLIB_ZF2DGame P2SensorEventData {
 public:
-    /** @brief may be null, see #P2Body::p2_bodyRemoveLater */
+    /** @brief the sensor shape */
     P2Shape *p2_shape0;
-    /** @brief may be null, see #P2Body::p2_bodyRemoveLater */
+    /** @brief the visitor shape */
     P2Shape *p2_shape1;
 };
 ZFTYPEID_ACCESS_ONLY_DECLARE(ZFLIB_ZF2DGame, P2SensorEventData, P2SensorEventData)
@@ -928,16 +906,16 @@ zfclass ZFLIB_ZF2DGame P2SensorEvent : zfextend ZFObject {
 public:
     /** @brief see #P2World */
     ZFCoreArray<P2SensorEventData> p2_sensorEnterList;
-    /** @brief see #P2World, #P2Body::p2_bodyRemoveLater */
+    /** @brief see #P2World */
     ZFCoreArray<P2SensorEventData> p2_sensorExitList;
 };
 
 /** @brief see #P2World */
 zfclassPOD ZFLIB_ZF2DGame P2ContactEventData {
 public:
-    /** @brief may be null, see #P2Body::p2_bodyRemoveLater */
+    /** @brief the shape */
     P2Shape *p2_shape0;
-    /** @brief may be null, see #P2Body::p2_bodyRemoveLater */
+    /** @brief the shape */
     P2Shape *p2_shape1;
 };
 ZFTYPEID_ACCESS_ONLY_DECLARE(ZFLIB_ZF2DGame, P2ContactEventData, P2ContactEventData)
@@ -951,7 +929,7 @@ zfclass ZFLIB_ZF2DGame P2ContactEvent : zfextend ZFObject {
 public:
     /** @brief see #P2World */
     ZFCoreArray<P2ContactEventData> p2_contactEnterList;
-    /** @brief see #P2World, #P2Body::p2_bodyRemoveLater */
+    /** @brief see #P2World */
     ZFCoreArray<P2ContactEventData> p2_contactExitList;
 };
 
@@ -1003,7 +981,7 @@ zfclassFwd _ZFP_P2WorldPrivate;
  *
  * NOTE:
  * -  for #P2World, origin point is at left down zero point,
- *   and rotation is counter clockwise
+ *   and rotation is clockwise
  * -  for #ZFUIView, origin point is at left top zero point,
  *   and rotation is clockwise
  * -  when using #P2WorldView,
