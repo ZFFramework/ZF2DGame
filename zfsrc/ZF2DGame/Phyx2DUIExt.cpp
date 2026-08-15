@@ -1,5 +1,6 @@
 #include "Phyx2DUIExt.h"
 
+#include "../../zfsrc_ext/ZFImpl/_repo/box2d/box2d/box2d.h"
 #include <cmath> // for coordinate conv
 
 ZF_NAMESPACE_GLOBAL_BEGIN
@@ -144,7 +145,7 @@ private:
             ) {
         zffloat dx = w / 2 - cx;
         zffloat dy = h / 2 - cy;
-        zffloat rt = r * (zffloat)M_PI / 180;
+        zffloat rt = (zffloat)(r * B2_PI / 180);
         zffloat cr = cos(rt);
         zffloat sr = sin(rt);
 
