@@ -123,62 +123,16 @@ public:
         }
     }
 private:
-    static void _coordinateConv(
-            // coordinate in UI, origin is at left top
-            ZF_OUT zffloat &Nx // x,y to left top
-            , ZF_OUT zffloat &Ny
-            , ZF_OUT zffloat &Nw // w,h of the object
-            , ZF_OUT zffloat &Nh
-            , ZF_OUT zffloat &Nr // rotation in degree, clockwise
-            // coordinate in physics world, origin is at left bottom
-            , ZF_IN zffloat const &x // x,y to left bottom
-            , ZF_IN zffloat const &y
-            , ZF_IN zffloat const &w // w,h of the object
-            , ZF_IN zffloat const &h
-            , ZF_IN zffloat const &cx // mass center to object left bottom
-            , ZF_IN zffloat const &cy
-            , ZF_IN zffloat const &r // rotation in degree, clockwise
-            , ZF_IN zffloat const &s // scale = UI_size_unit / physics_size_unit
-            , ZF_IN zffloat const &H // physics world height
-            , ZF_IN zffloat const &ox // additional offset of physics world
-            , ZF_IN zffloat const &oy // additional offset of physics world
-            ) {
-        zffloat dx = w / 2 - cx;
-        zffloat dy = h / 2 - cy;
-        zffloat rt = (zffloat)(r * B2_PI / 180);
-        zffloat cr = cos(rt);
-        zffloat sr = sin(rt);
-
-        Nx = (x + (dx * cr + dy * sr) - w / 2 - ox) * s;
-        Ny = (H - (y + (-dx * sr + dy * cr)) - h / 2 - oy) * s;
-        Nw = w * s;
-        Nh = h * s;
-        Nr = r;
-    }
     void _bodyPosUpdate(ZF_IN P2Body *body, ZF_IN ZFUIView *bodyView, ZF_IN const ZFUIPoint &position, ZF_IN zffloat rotation) {
-        const ZFUIPoint &UIOffset = world->p2_UIOffset();
-        ZFUIPoint centerOfMass = body->p2_centerOfMass();
-        ZFUIRect aabb = body->p2_AABBLocal();
-
-        zffloat Nx, Ny, Nw, Nh, Nr;
-        _coordinateConv(
-                Nx, Ny, Nw, Nh, Nr
-                , position.x
-                , position.y
-                , aabb.width
-                , aabb.height
-                , centerOfMass.x - aabb.x
-                , centerOfMass.y - aabb.y
-                , rotation
-                , world->p2_UIScale()
-                , worldView->height() / world->p2_UIScale()
-                , UIOffset.x
-                , UIOffset.y
-                );
-
         bodyView->UIScale(body->p2_ownerUnit()->p2_unitScale());
-        bodyView->rotateZ(Nr);
-        bodyView->viewFrame(ZFUIRectCreate(Nx, Ny, Nw, Nh));
+        bodyView->rotateZ(rotation);
+        bodyView->viewFrame(P2CoordinateToRect(
+                    world
+                    , position
+                    , body->p2_AABBLocal()
+                    , rotation
+                    , body->p2_centerOfMass()
+                    ));
     }
 };
 
@@ -292,6 +246,105 @@ void P2WorldView::layoutOnLayout(ZF_IN const ZFUIRect &bounds) {
         }
     }
     d->visibleAreaUpdate(bounds);
+}
+
+// ============================================================
+ZFMETHOD_FUNC_DEFINE_6(void, P2CoordinateToRectT
+        , ZFMP_OUT(ZFUIRect &, rect)
+        , ZFMP_IN(P2World *, world)
+        , ZFMP_IN(const ZFUIPoint &, position)
+        , ZFMP_IN(const ZFUIRect &, aabbLocal)
+        , ZFMP_IN_OPT(zffloat, rotation, 0)
+        , ZFMP_IN_OPT(const ZFUIPoint &, centerOfMass, ZFUIPointZero())
+        ) {
+    zffloat x = position.x;
+    zffloat y = position.y;
+    zffloat w = aabbLocal.width;
+    zffloat h = aabbLocal.height;
+    zffloat s = world->p2_UIScale();
+    zffloat H = zfcast(P2WorldView *, world)->height() / s;
+    const ZFUIPoint &offset = world->p2_UIOffset();
+
+    zffloat dx = w / 2 - (centerOfMass.x - aabbLocal.x);
+    zffloat dy = h / 2 - (centerOfMass.y - aabbLocal.y);
+    zffloat r = (zffloat)(rotation * B2_PI / 180);
+    zffloat cr = cos(r);
+    zffloat sr = sin(r);
+
+    rect.x = (x + (dx * cr + dy * sr) - w / 2 - offset.x) * s;
+    rect.y = (H - (y + (-dx * sr + dy * cr)) - h / 2 - offset.y) * s;
+    rect.width = w * s;
+    rect.height = h * s;
+}
+ZFMETHOD_FUNC_DEFINE_5(ZFUIRect, P2CoordinateToRect
+        , ZFMP_IN(P2World *, world)
+        , ZFMP_IN(const ZFUIPoint &, position)
+        , ZFMP_IN(const ZFUIRect &, aabbLocal)
+        , ZFMP_IN_OPT(zffloat, rotation, 0)
+        , ZFMP_IN_OPT(const ZFUIPoint &, centerOfMass, ZFUIPointZero())
+        ) {
+    ZFUIRect rect;
+    P2CoordinateToRectT(
+            rect
+            , worldView
+            , position
+            , aabbLocal
+            , rotation
+            , centerOfMass
+            );
+    return rect;
+}
+
+ZFMETHOD_FUNC_DEFINE_3(void, P2AABBToRectT
+        , ZFMP_OUT(ZFUIRect &, rect)
+        , ZFMP_IN(P2World *, world)
+        , ZFMP_IN(const ZFUIRect &, aabb)
+        ) {
+    const ZFUIPoint &offset = world->p2_UIOffset();
+    zffloat scale = world->p2_UIScale();
+    zffloat height = zfcast(P2WorldView *, world)->height();
+    rect.width = aabb.width * scale;
+    rect.height = aabb.height * scale;
+    rect.x = (aabb.x + offset.x) * scale;
+    rect.y = height - (aabb.y + aabb.height + offset.y) * scale;
+}
+ZFMETHOD_FUNC_DEFINE_2(ZFUIRect, P2AABBToRect
+        , ZFMP_IN(P2World *, world)
+        , ZFMP_IN(const ZFUIRect &, aabb)
+        ) {
+    ZFUIRect rect;
+    P2AABBToRectT(
+            rect
+            , worldView
+            , aabb
+            );
+    return rect;
+}
+
+ZFMETHOD_FUNC_DEFINE_3(void, P2AABBFromRectT
+        , ZFMP_OUT(ZFUIRect &, aabb)
+        , ZFMP_IN(P2World *, world)
+        , ZFMP_IN(const ZFUIRect &, rect)
+        ) {
+    const ZFUIPoint &offset = world->p2_UIOffset();
+    zffloat scale = world->p2_UIScale();
+    zffloat height = zfcast(P2WorldView *, world)->height();
+    aabb.width = rect.width / scale;
+    aabb.height = rect.height / scale;
+    aabb.x = rect.x / scale - offset.x;
+    aabb.y = (height - (rect.y + rect.height)) / scale - offset.y;
+}
+ZFMETHOD_FUNC_DEFINE_2(ZFUIRect, P2AABBFromRect
+        , ZFMP_IN(P2World *, world)
+        , ZFMP_IN(const ZFUIRect &, rect)
+        ) {
+    ZFUIRect aabb;
+    P2AABBFromRectT(
+            aabb
+            , worldView
+            , rect
+            );
+    return rect;
 }
 
 ZF_NAMESPACE_GLOBAL_END

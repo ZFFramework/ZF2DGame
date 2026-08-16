@@ -92,6 +92,10 @@ public:
     /** @brief see #P2World, get local AABB, according to current property only, not applied with #P2Unit::p2_unitScale */
     ZFMETHOD_DECLARE_0(ZFUIRect, p2_AABBLocal)
 
+public:
+    /** @brief see #P2World, whether impl has attached to world */
+    ZFMETHOD_DECLARE_0(zfbool, p2_implAttached)
+
 protected:
     /** @brief for impl only */
     virtual ZFUIRect p2impl_AABBLocal(void) zfpurevirtual;
@@ -219,6 +223,10 @@ public:
     /** @brief see #P2World */
     ZFPROPERTY_ASSIGN(zfbool, p2_contactEnable)
     ZFPROPERTY_ON_UPDATE_DECLARE(zfbool, p2_contactEnable)
+
+public:
+    /** @brief see #P2World, whether impl has attached to world */
+    ZFMETHOD_DECLARE_0(zfbool, p2_implAttached)
 
 protected:
     /** @brief init with body id */
@@ -598,7 +606,7 @@ public:
      */
     ZFMETHOD_DECLARE_0(ZFUISize, p2_bodySize)
     /**
-     * @brief see #P2World, relative to center of #p2_bodySize, calculate and cached automatically
+     * @brief see #P2World, relative to origin of #p2_AABBLocal, calculate and cached automatically
      *
      * not applied with #P2Unit::p2_unitScale
      */
@@ -673,6 +681,10 @@ public:
             , ZFMP_IN(zffloat, impulse)
             , ZFMP_IN_OPT(zfbool, wakeup, zftrue)
             )
+
+public:
+    /** @brief see #P2World, whether impl has attached to world */
+    ZFMETHOD_DECLARE_0(zfbool, p2_implAttached)
 
 protected:
     zfoverride
@@ -1007,25 +1019,25 @@ public:
     /**
      * @brief see #ZFObject::observerNotify
      *
-     * called when body attached, param0 is the #P2Body
+     * called when #P2Body::p2_implAttached attached, param0 is the #P2Body
      */
     ZFEVENT(P2BodyAttach)
     /**
      * @brief see #ZFObject::observerNotify
      *
-     * called when body detached, param0 is the #P2Body
+     * called when #P2Body::p2_implAttached detached, param0 is the #P2Body
      */
     ZFEVENT(P2BodyDetach)
     /**
      * @brief see #ZFObject::observerNotify
      *
-     * called when joint attached, param0 is the #P2Joint
+     * called when #P2Joint::p2_implAttached attached, param0 is the #P2Joint
      */
     ZFEVENT(P2JointAttach)
     /**
      * @brief see #ZFObject::observerNotify
      *
-     * called when joint detached, param0 is the #P2Joint
+     * called when #P2Joint::p2_implAttached detached, param0 is the #P2Joint
      */
     ZFEVENT(P2JointDetach)
 
@@ -1051,6 +1063,13 @@ public:
     /**
      * @brief see #ZFObject::observerNotify
      *
+     * called when any body moved during each simulation step,
+     * param0 is #P2BodyMoveEvent
+     */
+    ZFEVENT(P2BodyMoveEvent)
+    /**
+     * @brief see #ZFObject::observerNotify
+     *
      * called when any child shape fired sensor event during each simulation step,
      * param0 is #P2SensorEvent
      */
@@ -1069,10 +1088,10 @@ public:
     ZFPROPERTY_ON_UPDATE_DECLARE(ZFUIPoint, p2_gravity)
 
 public:
-    /** @brief see #P2World */
+    /** @brief see #P2World, positive value means item moves to right top, in P2's size unit */
     ZFPROPERTY_ASSIGN(ZFUIPoint, p2_UIOffset)
     ZFPROPERTY_ON_UPDATE_DECLARE(ZFUIPoint, p2_UIOffset)
-    /** @brief see #P2World */
+    /** @brief see #P2World, `scale = UI_size_unit / P2_size_unit` */
     ZFPROPERTY_ASSIGN(zffloat, p2_UIScale, 50)
     ZFPROPERTY_ON_UPDATE_DECLARE(zffloat, p2_UIScale)
     /**

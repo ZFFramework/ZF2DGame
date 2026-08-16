@@ -67,6 +67,11 @@ public:
     ZFPROPERTY_ASSIGN(ZFCoreArray<zfautoT<TileView> >, tileFg)
     ZFPROPERTY_ON_UPDATE_DECLARE(ZFCoreArray<zfautoT<TileView> >, tileFg)
 
+    /** @brief draw debug colors to indicates all body/shape/joint */
+    ZFPROPERTY_ASSIGN(zfbool, debugDraw)
+    ZFPROPERTY_ON_ATTACH_DECLARE(zfbool, debugDraw)
+    ZFPROPERTY_ON_DETACH_DECLARE(zfbool, debugDraw)
+
     /** @brief see #tileBg, make #tileBg and #tileFg auto update by #P2World::p2_UIOffset */
     ZFMETHOD_DECLARE_0(void, tileUpdateByUI)
     /** @brief see #tileBg, whether #tileBg and #tileFg update by #tileUpdateByUI */
@@ -104,6 +109,49 @@ protected:
 private:
     _ZFP_P2WorldViewPrivate *d;
 };
+
+// ============================================================
+/** @brief transform coordinate */
+ZFMETHOD_FUNC_DECLARE_6(ZFLIB_ZF2DGame, void, P2CoordinateToRectT
+        , ZFMP_OUT(ZFUIRect &, rect)
+        , ZFMP_IN(P2World *, world)
+        , ZFMP_IN(const ZFUIPoint &, position)
+        , ZFMP_IN(const ZFUIRect &, aabbLocal)
+        , ZFMP_IN_OPT(zffloat, rotation, 0)
+        , ZFMP_IN_OPT(const ZFUIPoint &, centerOfMass, ZFUIPointZero())
+        )
+/** @brief transform coordinate */
+ZFMETHOD_FUNC_DECLARE_5(ZFLIB_ZF2DGame, ZFUIRect, P2CoordinateToRect
+        , ZFMP_IN(P2World *, world)
+        , ZFMP_IN(const ZFUIPoint &, position)
+        , ZFMP_IN(const ZFUIRect &, aabbLocal)
+        , ZFMP_IN_OPT(zffloat, rotation, 0)
+        , ZFMP_IN_OPT(const ZFUIPoint &, centerOfMass, ZFUIPointZero())
+        )
+
+/** @brief transform coordinate */
+ZFMETHOD_FUNC_DECLARE_3(ZFLIB_ZF2DGame, void, P2AABBToRectT
+        , ZFMP_OUT(ZFUIRect &, rect)
+        , ZFMP_IN(P2World *, world)
+        , ZFMP_IN(const ZFUIRect &, aabb)
+        )
+/** @brief transform coordinate */
+ZFMETHOD_FUNC_DECLARE_2(ZFLIB_ZF2DGame, ZFUIRect, P2AABBToRect
+        , ZFMP_IN(P2World *, world)
+        , ZFMP_IN(const ZFUIRect &, aabb)
+        )
+
+/** @brief transform coordinate */
+ZFMETHOD_FUNC_DECLARE_3(ZFLIB_ZF2DGame, void, P2AABBFromRectT
+        , ZFMP_OUT(ZFUIRect &, aabb)
+        , ZFMP_IN(P2World *, world)
+        , ZFMP_IN(const ZFUIRect &, rect)
+        )
+/** @brief transform coordinate */
+ZFMETHOD_FUNC_DECLARE_2(ZFLIB_ZF2DGame, ZFUIRect, P2AABBFromRect
+        , ZFMP_IN(P2World *, world)
+        , ZFMP_IN(const ZFUIRect &, rect)
+        )
 
 ZF_NAMESPACE_GLOBAL_END
 #endif // #ifndef _ZFI_Phyx2DUIExt_h_
