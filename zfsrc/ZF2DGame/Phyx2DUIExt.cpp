@@ -156,10 +156,9 @@ private:
         Nr = r;
     }
     void _bodyPosUpdate(ZF_IN P2Body *body, ZF_IN ZFUIView *bodyView, ZF_IN const ZFUIPoint &position, ZF_IN zffloat rotation) {
-        zffloat unitScale = body->p2_ownerUnit()->p2_unitScale();
         const ZFUIPoint &UIOffset = world->p2_UIOffset();
-        ZFUIPoint centerOfMass = ZFUIPointApplyScaleReversely(body->p2_centerOfMass(), unitScale);
-        ZFUIRect aabb = ZFUIRectApplyScaleReversely(body->p2_AABBLocal(), unitScale);
+        ZFUIPoint centerOfMass = body->p2_centerOfMass();
+        ZFUIRect aabb = body->p2_AABBLocal();
 
         zffloat Nx, Ny, Nw, Nh, Nr;
         _coordinateConv(
@@ -177,7 +176,7 @@ private:
                 , UIOffset.y
                 );
 
-        bodyView->UIScale(unitScale);
+        bodyView->UIScale(body->p2_ownerUnit()->p2_unitScale());
         bodyView->rotateZ(Nr);
         bodyView->viewFrame(ZFUIRectCreate(Nx, Ny, Nw, Nh));
     }

@@ -89,12 +89,12 @@ public:
 public:
     /** @brief see #P2World, get world AABB, valid only after added to world, already applied with #P2Unit::p2_unitScale */
     ZFMETHOD_DECLARE_0(ZFUIRect, p2_AABB)
-    /** @brief see #P2World, get local AABB, according to current property only, applied with #P2Unit::p2_unitScale */
+    /** @brief see #P2World, get local AABB, according to current property only, not applied with #P2Unit::p2_unitScale */
     ZFMETHOD_DECLARE_0(ZFUIRect, p2_AABBLocal)
 
 protected:
     /** @brief for impl only */
-    virtual ZFUIRect p2impl_AABBLocal(ZF_IN zffloat unitScale) zfpurevirtual;
+    virtual ZFUIRect p2impl_AABBLocal(void) zfpurevirtual;
     /** @brief for impl only */
     virtual inline void p2impl_shapeCreate(ZF_IN P2Body *ownerBody, ZF_IN zffloat unitScale) {}
     zfoverride
@@ -128,7 +128,7 @@ zfclass ZFLIB_ZF2DGame P2ShapeBox : zfextend P2Shape {
     ZFPROPERTY_ON_UPDATE_DECLARE(zffloat, p2_radius)
 protected:
     zfoverride
-    virtual ZFUIRect p2impl_AABBLocal(ZF_IN zffloat unitScale);
+    virtual ZFUIRect p2impl_AABBLocal(void);
     zfoverride
     virtual void p2impl_shapeCreate(ZF_IN P2Body *ownerBody, ZF_IN zffloat unitScale);
 };
@@ -143,7 +143,7 @@ zfclass ZFLIB_ZF2DGame P2ShapeCircle : zfextend P2Shape {
     ZFPROPERTY_ON_UPDATE_DECLARE(zffloat, p2_radius)
 protected:
     zfoverride
-    virtual ZFUIRect p2impl_AABBLocal(ZF_IN zffloat unitScale);
+    virtual ZFUIRect p2impl_AABBLocal(void);
     zfoverride
     virtual void p2impl_shapeCreate(ZF_IN P2Body *ownerBody, ZF_IN zffloat unitScale);
 };
@@ -161,7 +161,7 @@ zfclass ZFLIB_ZF2DGame P2ShapeCapsule : zfextend P2Shape {
     ZFPROPERTY_ON_UPDATE_DECLARE(zffloat, p2_radius)
 protected:
     zfoverride
-    virtual ZFUIRect p2impl_AABBLocal(ZF_IN zffloat unitScale);
+    virtual ZFUIRect p2impl_AABBLocal(void);
     zfoverride
     virtual void p2impl_shapeCreate(ZF_IN P2Body *ownerBody, ZF_IN zffloat unitScale);
 };
@@ -178,7 +178,7 @@ public:
             )
 protected:
     zfoverride
-    virtual ZFUIRect p2impl_AABBLocal(ZF_IN zffloat unitScale);
+    virtual ZFUIRect p2impl_AABBLocal(void);
     zfoverride
     virtual void p2impl_shapeCreate(ZF_IN P2Body *ownerBody, ZF_IN zffloat unitScale);
 
@@ -587,12 +587,12 @@ public:
 public:
     /** @brief see #P2World, world AABB, note: calculate each time called, already applied with #P2Unit::p2_unitScale */
     ZFMETHOD_DECLARE_0(ZFUIRect, p2_AABB)
-    /** @brief see #P2World, local AABB, calculate by each shape's #P2Shape::p2_AABBLocal, applied with #P2Unit::p2_unitScale */
+    /** @brief see #P2World, local AABB, calculate by each shape's #P2Shape::p2_AABBLocal, not applied with #P2Unit::p2_unitScale */
     ZFMETHOD_DECLARE_0(ZFUIRect, p2_AABBLocal)
     /**
      * @brief get minimal bounding box size that can holds all child shapes, calculate and cached automatically
      *
-     * already applied with #P2Unit::p2_unitScale,
+     * not applied with #P2Unit::p2_unitScale,
      * origin point ensured at center of the bounding box,
      * all child shapes can be layouted as their proper position according to the origin point
      */
@@ -600,7 +600,7 @@ public:
     /**
      * @brief see #P2World, relative to center of #p2_bodySize, calculate and cached automatically
      *
-     * already applied with #P2Unit::p2_unitScale
+     * not applied with #P2Unit::p2_unitScale
      */
     ZFMETHOD_DECLARE_0(ZFUIPoint, p2_centerOfMass)
 
