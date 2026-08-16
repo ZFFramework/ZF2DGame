@@ -153,8 +153,13 @@ public:
     zfimplhashmap<P2Joint *, zfbool> bodyRefJointList;
     ZFUISize bodySize; // bodySize.width==-1 if needs update
     ZFUIPoint centerOfMass; // bodySize.width==-1 if needs update, relative to bodySize
-    zfbool unitScaleUpdateRequested;
-    zfbool massUpdateRequested;
+
+    enum {
+        stateFlag_unitScaleUpdateRequested = 1 << 0,
+        stateFlag_massUpdateRequested = 1 << 1,
+    };
+    zfuint stateFlag;
+
 public:
     _ZFP_P2BodyPrivate(void)
     : implBodyId(b2_nullBodyId)
@@ -162,9 +167,8 @@ public:
     , bodyRefJointList()
     , bodySize(ZFUISizeInvalid())
     , centerOfMass()
-    , unitScaleUpdateRequested(zffalse)
-    , massUpdateRequested(zftrue)
     {
+        ZFBitSet(stateFlag, stateFlag_massUpdateRequested);
     }
 public:
     ZFUIRect bodyAABBLocal(ZF_IN zffloat unitScale) {
@@ -208,12 +212,12 @@ public:
         }
     }
     void massUpdate(void) {
-        if(this->massUpdateRequested) {
+        if(ZFBitTest(stateFlag, stateFlag_massUpdateRequested)) {
             // updating mass may modify linearVelocity (because of centerOfMass changed)
             b2Vec2 t = b2Body_GetLinearVelocity(this->implBodyId);
             b2Body_ApplyMassFromShapes(this->implBodyId);
             b2Body_SetLinearVelocity(this->implBodyId, t);
-            this->massUpdateRequested = zffalse;
+            ZFBitUnset(stateFlag, stateFlag_massUpdateRequested);
         }
     }
 };
@@ -225,13 +229,13 @@ public:
 
     enum {
         stateFlag_unitVisible = 1 << 0,
-        stateFlag_E_P2UnitOnVisibilityUpdate = 1 << 1,
-        stateFlag_E_P2UnitOnSensorEnter = 1 << 2,
-        stateFlag_E_P2UnitOnSensorExit = 1 << 3,
-        stateFlag_E_P2UnitOnVisitorEnter = 1 << 4,
-        stateFlag_E_P2UnitOnVisitorExit = 1 << 5,
-        stateFlag_E_P2UnitOnContactEnter = 1 << 6,
-        stateFlag_E_P2UnitOnContactExit = 1 << 7,
+        stateFlag_E_P2VisibilityUpdate = 1 << 1,
+        stateFlag_E_P2SensorEnter = 1 << 2,
+        stateFlag_E_P2SensorExit = 1 << 3,
+        stateFlag_E_P2SensorVisitorEnter = 1 << 4,
+        stateFlag_E_P2SensorVisitorExit = 1 << 5,
+        stateFlag_E_P2ContactEnter = 1 << 6,
+        stateFlag_E_P2ContactExit = 1 << 7,
     };
     zfuint stateFlag;
 
@@ -246,53 +250,53 @@ public:
 static zfuint _ZFP_P2Unit_stateFlag = 0;
 ZF_GLOBAL_INITIALIZER_INIT_WITH_LEVEL(P2Unit_stateFlag, ZFLevelZFFrameworkStatic) {
     _ZFP_P2Unit_stateFlag = 0;
-    ZFGlobalObserver().observerHasAddStateAttach(P2Unit::E_P2UnitOnVisibilityUpdate(), &_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnVisibilityUpdate);
-    ZFGlobalObserver().observerHasAddStateAttach(P2Unit::E_P2UnitOnSensorEnter(), &_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnSensorEnter);
-    ZFGlobalObserver().observerHasAddStateAttach(P2Unit::E_P2UnitOnSensorExit(), &_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnSensorExit);
-    ZFGlobalObserver().observerHasAddStateAttach(P2Unit::E_P2UnitOnVisitorEnter(), &_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnVisitorEnter);
-    ZFGlobalObserver().observerHasAddStateAttach(P2Unit::E_P2UnitOnVisitorExit(), &_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnVisitorExit);
-    ZFGlobalObserver().observerHasAddStateAttach(P2Unit::E_P2UnitOnContactEnter(), &_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnContactEnter);
-    ZFGlobalObserver().observerHasAddStateAttach(P2Unit::E_P2UnitOnContactExit(), &_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnContactExit);
+    ZFGlobalObserver().observerHasAddStateAttach(P2Unit::E_P2VisibilityUpdate(), &_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2VisibilityUpdate);
+    ZFGlobalObserver().observerHasAddStateAttach(P2Unit::E_P2SensorEnter(), &_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2SensorEnter);
+    ZFGlobalObserver().observerHasAddStateAttach(P2Unit::E_P2SensorExit(), &_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2SensorExit);
+    ZFGlobalObserver().observerHasAddStateAttach(P2Unit::E_P2SensorVisitorEnter(), &_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2SensorVisitorEnter);
+    ZFGlobalObserver().observerHasAddStateAttach(P2Unit::E_P2SensorVisitorExit(), &_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2SensorVisitorExit);
+    ZFGlobalObserver().observerHasAddStateAttach(P2Unit::E_P2ContactEnter(), &_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2ContactEnter);
+    ZFGlobalObserver().observerHasAddStateAttach(P2Unit::E_P2ContactExit(), &_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2ContactExit);
 }
 ZF_GLOBAL_INITIALIZER_DESTROY(P2Unit_stateFlag) {
-    ZFGlobalObserver().observerHasAddStateDetach(P2Unit::E_P2UnitOnVisibilityUpdate(), &_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnVisibilityUpdate);
-    ZFGlobalObserver().observerHasAddStateDetach(P2Unit::E_P2UnitOnSensorEnter(), &_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnSensorEnter);
-    ZFGlobalObserver().observerHasAddStateDetach(P2Unit::E_P2UnitOnSensorExit(), &_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnSensorExit);
-    ZFGlobalObserver().observerHasAddStateDetach(P2Unit::E_P2UnitOnVisitorEnter(), &_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnVisitorEnter);
-    ZFGlobalObserver().observerHasAddStateDetach(P2Unit::E_P2UnitOnVisitorExit(), &_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnVisitorExit);
-    ZFGlobalObserver().observerHasAddStateDetach(P2Unit::E_P2UnitOnContactEnter(), &_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnContactEnter);
-    ZFGlobalObserver().observerHasAddStateDetach(P2Unit::E_P2UnitOnContactExit(), &_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnContactExit);
+    ZFGlobalObserver().observerHasAddStateDetach(P2Unit::E_P2VisibilityUpdate(), &_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2VisibilityUpdate);
+    ZFGlobalObserver().observerHasAddStateDetach(P2Unit::E_P2SensorEnter(), &_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2SensorEnter);
+    ZFGlobalObserver().observerHasAddStateDetach(P2Unit::E_P2SensorExit(), &_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2SensorExit);
+    ZFGlobalObserver().observerHasAddStateDetach(P2Unit::E_P2SensorVisitorEnter(), &_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2SensorVisitorEnter);
+    ZFGlobalObserver().observerHasAddStateDetach(P2Unit::E_P2SensorVisitorExit(), &_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2SensorVisitorExit);
+    ZFGlobalObserver().observerHasAddStateDetach(P2Unit::E_P2ContactEnter(), &_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2ContactEnter);
+    ZFGlobalObserver().observerHasAddStateDetach(P2Unit::E_P2ContactExit(), &_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2ContactExit);
 }
 ZF_GLOBAL_INITIALIZER_END(P2Unit_stateFlag)
 void P2Unit::observerOnAdd(ZF_IN zfidentity eventId) {
     zfsuper::observerOnAdd(eventId);
     if(zffalse) {}
-    else if(eventId == P2Unit::E_P2UnitOnVisibilityUpdate()) {ZFBitSet(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnVisibilityUpdate);}
-    else if(eventId == P2Unit::E_P2UnitOnSensorEnter()) {ZFBitSet(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnSensorEnter);}
-    else if(eventId == P2Unit::E_P2UnitOnSensorExit()) {ZFBitSet(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnSensorExit);}
-    else if(eventId == P2Unit::E_P2UnitOnVisitorEnter()) {ZFBitSet(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnVisitorEnter);}
-    else if(eventId == P2Unit::E_P2UnitOnVisitorExit()) {ZFBitSet(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnVisitorExit);}
-    else if(eventId == P2Unit::E_P2UnitOnContactEnter()) {ZFBitSet(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnContactEnter);}
-    else if(eventId == P2Unit::E_P2UnitOnContactExit()) {ZFBitSet(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnContactExit);}
+    else if(eventId == P2Unit::E_P2VisibilityUpdate()) {ZFBitSet(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2VisibilityUpdate);}
+    else if(eventId == P2Unit::E_P2SensorEnter()) {ZFBitSet(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2SensorEnter);}
+    else if(eventId == P2Unit::E_P2SensorExit()) {ZFBitSet(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2SensorExit);}
+    else if(eventId == P2Unit::E_P2SensorVisitorEnter()) {ZFBitSet(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2SensorVisitorEnter);}
+    else if(eventId == P2Unit::E_P2SensorVisitorExit()) {ZFBitSet(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2SensorVisitorExit);}
+    else if(eventId == P2Unit::E_P2ContactEnter()) {ZFBitSet(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2ContactEnter);}
+    else if(eventId == P2Unit::E_P2ContactExit()) {ZFBitSet(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2ContactExit);}
 }
 void P2Unit::observerOnRemove(ZF_IN zfidentity eventId) {
     zfsuper::observerOnRemove(eventId);
     if(zffalse) {}
-    else if(eventId == P2Unit::E_P2UnitOnVisibilityUpdate()) {ZFBitUnset(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnVisibilityUpdate);}
-    else if(eventId == P2Unit::E_P2UnitOnSensorEnter()) {ZFBitUnset(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnSensorEnter);}
-    else if(eventId == P2Unit::E_P2UnitOnSensorExit()) {ZFBitUnset(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnSensorExit);}
-    else if(eventId == P2Unit::E_P2UnitOnVisitorEnter()) {ZFBitUnset(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnVisitorEnter);}
-    else if(eventId == P2Unit::E_P2UnitOnVisitorExit()) {ZFBitUnset(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnVisitorExit);}
-    else if(eventId == P2Unit::E_P2UnitOnContactEnter()) {ZFBitUnset(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnContactEnter);}
-    else if(eventId == P2Unit::E_P2UnitOnContactExit()) {ZFBitUnset(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnContactExit);}
+    else if(eventId == P2Unit::E_P2VisibilityUpdate()) {ZFBitUnset(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2VisibilityUpdate);}
+    else if(eventId == P2Unit::E_P2SensorEnter()) {ZFBitUnset(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2SensorEnter);}
+    else if(eventId == P2Unit::E_P2SensorExit()) {ZFBitUnset(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2SensorExit);}
+    else if(eventId == P2Unit::E_P2SensorVisitorEnter()) {ZFBitUnset(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2SensorVisitorEnter);}
+    else if(eventId == P2Unit::E_P2SensorVisitorExit()) {ZFBitUnset(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2SensorVisitorExit);}
+    else if(eventId == P2Unit::E_P2ContactEnter()) {ZFBitUnset(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2ContactEnter);}
+    else if(eventId == P2Unit::E_P2ContactExit()) {ZFBitUnset(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2ContactExit);}
 }
-ZFEVENT_REGISTER(P2Unit, P2UnitOnVisibilityUpdate)
-ZFEVENT_REGISTER(P2Unit, P2UnitOnSensorEnter)
-ZFEVENT_REGISTER(P2Unit, P2UnitOnSensorExit)
-ZFEVENT_REGISTER(P2Unit, P2UnitOnVisitorEnter)
-ZFEVENT_REGISTER(P2Unit, P2UnitOnVisitorExit)
-ZFEVENT_REGISTER(P2Unit, P2UnitOnContactEnter)
-ZFEVENT_REGISTER(P2Unit, P2UnitOnContactExit)
+ZFEVENT_REGISTER(P2Unit, P2VisibilityUpdate)
+ZFEVENT_REGISTER(P2Unit, P2SensorEnter)
+ZFEVENT_REGISTER(P2Unit, P2SensorExit)
+ZFEVENT_REGISTER(P2Unit, P2SensorVisitorEnter)
+ZFEVENT_REGISTER(P2Unit, P2SensorVisitorExit)
+ZFEVENT_REGISTER(P2Unit, P2ContactEnter)
+ZFEVENT_REGISTER(P2Unit, P2ContactExit)
 
 zfclassNotPOD _ZFP_P2WorldPrivate {
 public:
@@ -311,11 +315,17 @@ public:
     enum {
         stateFlag_stepRunning = 1 << 0,
         stateFlag_UIUpdateFlag = 1 << 1,
-        stateFlag_E_P2StepPrev = 1 << 2,
-        stateFlag_E_P2StepPost = 1 << 3,
-        stateFlag_E_P2UnitVisibilityEvent = 1 << 4,
-        stateFlag_E_P2SensorEvent = 1 << 5,
-        stateFlag_E_P2ContactEvent = 1 << 6,
+        stateFlag_E_P2UnitAttach = 1 << 2,
+        stateFlag_E_P2UnitDetach = 1 << 3,
+        stateFlag_E_P2BodyAttach = 1 << 4,
+        stateFlag_E_P2BodyDetach = 1 << 5,
+        stateFlag_E_P2JointAttach = 1 << 6,
+        stateFlag_E_P2JointDetach = 1 << 7,
+        stateFlag_E_P2StepPrev = 1 << 8,
+        stateFlag_E_P2StepPost = 1 << 9,
+        stateFlag_E_P2UnitVisibilityEvent = 1 << 10,
+        stateFlag_E_P2SensorEvent = 1 << 11,
+        stateFlag_E_P2ContactEvent = 1 << 12,
     };
     zfuint stateFlag;
 
@@ -364,6 +374,12 @@ public:
 static zfuint _ZFP_P2World_stateFlag = 0;
 ZF_GLOBAL_INITIALIZER_INIT_WITH_LEVEL(P2World_stateFlag, ZFLevelZFFrameworkStatic) {
     _ZFP_P2World_stateFlag = 0;
+    ZFGlobalObserver().observerHasAddStateAttach(P2World::E_P2UnitAttach(), &_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2UnitAttach);
+    ZFGlobalObserver().observerHasAddStateAttach(P2World::E_P2UnitDetach(), &_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2UnitDetach);
+    ZFGlobalObserver().observerHasAddStateAttach(P2World::E_P2BodyAttach(), &_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2BodyAttach);
+    ZFGlobalObserver().observerHasAddStateAttach(P2World::E_P2BodyDetach(), &_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2BodyDetach);
+    ZFGlobalObserver().observerHasAddStateAttach(P2World::E_P2JointAttach(), &_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2JointAttach);
+    ZFGlobalObserver().observerHasAddStateAttach(P2World::E_P2JointDetach(), &_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2JointDetach);
     ZFGlobalObserver().observerHasAddStateAttach(P2World::E_P2StepPrev(), &_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2StepPrev);
     ZFGlobalObserver().observerHasAddStateAttach(P2World::E_P2StepPost(), &_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2StepPost);
     ZFGlobalObserver().observerHasAddStateAttach(P2World::E_P2UnitVisibilityEvent(), &_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2UnitVisibilityEvent);
@@ -371,6 +387,12 @@ ZF_GLOBAL_INITIALIZER_INIT_WITH_LEVEL(P2World_stateFlag, ZFLevelZFFrameworkStati
     ZFGlobalObserver().observerHasAddStateAttach(P2World::E_P2ContactEvent(), &_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2ContactEvent);
 }
 ZF_GLOBAL_INITIALIZER_DESTROY(P2World_stateFlag) {
+    ZFGlobalObserver().observerHasAddStateDetach(P2World::E_P2UnitAttach(), &_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2UnitAttach);
+    ZFGlobalObserver().observerHasAddStateDetach(P2World::E_P2UnitDetach(), &_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2UnitDetach);
+    ZFGlobalObserver().observerHasAddStateDetach(P2World::E_P2BodyAttach(), &_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2BodyAttach);
+    ZFGlobalObserver().observerHasAddStateDetach(P2World::E_P2BodyDetach(), &_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2BodyDetach);
+    ZFGlobalObserver().observerHasAddStateDetach(P2World::E_P2JointAttach(), &_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2JointAttach);
+    ZFGlobalObserver().observerHasAddStateDetach(P2World::E_P2JointDetach(), &_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2JointDetach);
     ZFGlobalObserver().observerHasAddStateDetach(P2World::E_P2StepPrev(), &_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2StepPrev);
     ZFGlobalObserver().observerHasAddStateDetach(P2World::E_P2StepPost(), &_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2StepPost);
     ZFGlobalObserver().observerHasAddStateDetach(P2World::E_P2UnitVisibilityEvent(), &_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2UnitVisibilityEvent);
@@ -381,6 +403,12 @@ ZF_GLOBAL_INITIALIZER_END(P2World_stateFlag)
 void P2World::observerOnAdd(ZF_IN zfidentity eventId) {
     zfsuper::observerOnAdd(eventId);
     if(zffalse) {}
+    else if(eventId == P2World::E_P2UnitAttach()) {ZFBitSet(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2UnitAttach);}
+    else if(eventId == P2World::E_P2UnitDetach()) {ZFBitSet(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2UnitDetach);}
+    else if(eventId == P2World::E_P2BodyAttach()) {ZFBitSet(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2BodyAttach);}
+    else if(eventId == P2World::E_P2BodyDetach()) {ZFBitSet(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2BodyDetach);}
+    else if(eventId == P2World::E_P2JointAttach()) {ZFBitSet(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2JointAttach);}
+    else if(eventId == P2World::E_P2JointDetach()) {ZFBitSet(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2JointDetach);}
     else if(eventId == P2World::E_P2StepPrev()) {ZFBitSet(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2StepPrev);}
     else if(eventId == P2World::E_P2StepPost()) {ZFBitSet(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2StepPost);}
     else if(eventId == P2World::E_P2UnitVisibilityEvent()) {ZFBitSet(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2UnitVisibilityEvent);}
@@ -390,12 +418,24 @@ void P2World::observerOnAdd(ZF_IN zfidentity eventId) {
 void P2World::observerOnRemove(ZF_IN zfidentity eventId) {
     zfsuper::observerOnRemove(eventId);
     if(zffalse) {}
+    else if(eventId == P2World::E_P2UnitAttach()) {ZFBitUnset(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2UnitAttach);}
+    else if(eventId == P2World::E_P2UnitDetach()) {ZFBitUnset(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2UnitDetach);}
+    else if(eventId == P2World::E_P2BodyAttach()) {ZFBitUnset(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2BodyAttach);}
+    else if(eventId == P2World::E_P2BodyDetach()) {ZFBitUnset(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2BodyDetach);}
+    else if(eventId == P2World::E_P2JointAttach()) {ZFBitUnset(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2JointAttach);}
+    else if(eventId == P2World::E_P2JointDetach()) {ZFBitUnset(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2JointDetach);}
     else if(eventId == P2World::E_P2StepPrev()) {ZFBitUnset(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2StepPrev);}
     else if(eventId == P2World::E_P2StepPost()) {ZFBitUnset(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2StepPost);}
     else if(eventId == P2World::E_P2UnitVisibilityEvent()) {ZFBitUnset(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2UnitVisibilityEvent);}
     else if(eventId == P2World::E_P2SensorEvent()) {ZFBitUnset(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2SensorEvent);}
     else if(eventId == P2World::E_P2ContactEvent()) {ZFBitUnset(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2ContactEvent);}
 }
+ZFEVENT_REGISTER(P2World, P2UnitAttach)
+ZFEVENT_REGISTER(P2World, P2UnitDetach)
+ZFEVENT_REGISTER(P2World, P2BodyAttach)
+ZFEVENT_REGISTER(P2World, P2BodyDetach)
+ZFEVENT_REGISTER(P2World, P2JointAttach)
+ZFEVENT_REGISTER(P2World, P2JointDetach)
 ZFEVENT_REGISTER(P2World, P2StepPrev)
 ZFEVENT_REGISTER(P2World, P2StepPost)
 ZFEVENT_REGISTER(P2World, P2UnitVisibilityEvent)
@@ -1887,7 +1927,7 @@ ZFPROPERTY_ON_UPDATE_DEFINE(P2Unit, zffloat, p2_unitScale) {
     }
     if(propertyValue != propertyValueOld) {
         if(this->p2_body()) {
-            this->p2_body()->_ZFP_P2Body_d->unitScaleUpdateRequested = zftrue;
+            ZFBitSet(this->p2_body()->_ZFP_P2Body_d->stateFlag, _ZFP_P2BodyPrivate::stateFlag_massUpdateRequested);
             this->p2_body()->_ZFP_P2Body_d->bodySize.width = -1;
             if(_ZFP_P2Unit_d->ownerWorld) {
                 _ZFP_P2Unit_d->ownerWorld->_ZFP_P2World_d->pendingBody[this->p2_body()] = zftrue;
@@ -1896,7 +1936,7 @@ ZFPROPERTY_ON_UPDATE_DEFINE(P2Unit, zffloat, p2_unitScale) {
         ZFArray *partList = this->p2_partList();
         for(zfindex i = partList->count() - 1; i != zfindexMax(); --i) {
             P2Body *part = partList->get(i);
-            part->_ZFP_P2Body_d->unitScaleUpdateRequested = zftrue;
+            ZFBitSet(part->_ZFP_P2Body_d->stateFlag, _ZFP_P2BodyPrivate::stateFlag_massUpdateRequested);
             part->_ZFP_P2Body_d->bodySize.width = -1;
             if(_ZFP_P2Unit_d->ownerWorld) {
                 _ZFP_P2Unit_d->ownerWorld->_ZFP_P2World_d->pendingBody[part] = zftrue;
@@ -1928,8 +1968,8 @@ ZFMETHOD_DEFINE_1(P2Unit, void, p2_part
         , ZFMP_IN(P2Body *, v)
         ) {
     ZFCoreAssert(v && v->p2_ownerUnit() == zfnull);
-    _ZFP_P2BodyAttach(this, v);
     this->p2_partList()->add(v);
+    _ZFP_P2BodyAttach(this, v);
 }
 ZFMETHOD_DEFINE_0(P2Unit, zfindex, p2_partCount) {
     return this->p2_partList()->count();
@@ -1969,8 +2009,8 @@ ZFMETHOD_DEFINE_0(P2Unit, void, p2_partRemoveAll) {
 ZFMETHOD_DEFINE_1(P2Unit, void, p2_joint
         , ZFMP_IN(P2Joint *, v)
         ) {
-    _ZFP_P2JointAttach(this, v);
     this->p2_jointList()->add(v);
+    _ZFP_P2JointAttach(this, v);
 }
 ZFMETHOD_DEFINE_0(P2Unit, zfindex, p2_jointCount) {
     return this->p2_jointList()->count();
@@ -2208,8 +2248,8 @@ ZFMETHOD_DEFINE_1(P2World, void, p2_unit
         , ZFMP_IN(P2Unit *, unit)
         ) {
     ZFCoreAssert(unit && unit->p2_ownerWorld() == zfnull);
-    _ZFP_P2UnitAttach(this, unit);
     this->p2_unitList()->add(unit);
+    _ZFP_P2UnitAttach(this, unit);
 }
 ZFMETHOD_DEFINE_1(P2World, void, p2_unit
         , ZFMP_IN(P2Body *, body)
@@ -2217,8 +2257,8 @@ ZFMETHOD_DEFINE_1(P2World, void, p2_unit
     ZFCoreAssert(body && body->p2_ownerUnit() == zfnull);
     zfobj<P2Unit> unit;
     unit->p2_body(body);
-    _ZFP_P2UnitAttach(this, unit);
     this->p2_unitList()->add(unit);
+    _ZFP_P2UnitAttach(this, unit);
 }
 ZFMETHOD_DEFINE_0(P2World, zfindex, p2_unitCount) {
     return this->p2_unitList()->count();
@@ -2258,8 +2298,8 @@ ZFMETHOD_DEFINE_0(P2World, void, p2_unitRemoveAll) {
 ZFMETHOD_DEFINE_1(P2World, void, p2_joint
         , ZFMP_IN(P2Joint *, v)
         ) {
-    _ZFP_P2JointAttach(this, v);
     this->p2_jointList()->add(v);
+    _ZFP_P2JointAttach(this, v);
 }
 ZFMETHOD_DEFINE_0(P2World, zfindex, p2_jointCount) {
     return this->p2_jointList()->count();
@@ -2438,6 +2478,23 @@ void P2World::objectOnInit(void) {
     implWorldDef.enableSleep = zftrue;
     implWorldDef.enableContinuous = zftrue;
     _ZFP_P2World_d->implWorldId = b2CreateWorld(&implWorldDef);
+
+    zfclassNotPOD _Impl {
+    public:
+        static void prev(ZF_IN const ZFArgs &zfargs) {
+            P2World *world = zfargs.sender();
+            world->p2_unitRemoveAll();
+        }
+        static void post(ZF_IN const ZFArgs &zfargs) {
+            P2World *world = zfargs.sender();
+            ZFArray *unitList = world->p2_unitList();
+            for(zfindex i = unitList->count() - 1; i != zfindexMax(); --i) {
+                _ZFP_P2UnitAttach(world, unitList->get(i));
+            }
+        }
+    };
+    this->observerAdd(ZFSerializable::E_SerializeFromPrev(), ZFCallbackForFunc(_Impl::prev));
+    this->observerAdd(ZFSerializable::E_SerializeFromPost(), ZFCallbackForFunc(_Impl::post));
 }
 void P2World::objectOnDealloc(void) {
     b2DestroyWorld(_ZFP_P2World_d->implWorldId);
@@ -2453,6 +2510,19 @@ void P2World::objectOnDeallocPrepare(void) {
         zfclassNotPOD CleanupJoint {
         public:
             static void a(ZF_IN P2Joint *joint) {
+                if(B2_IS_NON_NULL(joint->_ZFP_P2Joint_d->implJointId)) {
+                    P2World *world = joint->p2_ownerWorld();
+                    if(world) {
+                        if(ZFBitTest(world->_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2JointDetach)
+                                || ZFBitTest(_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2JointDetach)
+                                ) {
+                            world->observerNotify(P2World::E_P2JointDetach(), ZFArgs()
+                                    .param0(joint)
+                                    );
+                        }
+                    }
+                }
+
                 joint->_ZFP_P2Joint_d->implJointId = b2_nullJointId;
             }
         };
@@ -2460,7 +2530,21 @@ void P2World::objectOnDeallocPrepare(void) {
         public:
             static void a(ZF_IN P2World *world, ZF_IN P2Body *body) {
                 if(B2_IS_NON_NULL(body->_ZFP_P2Body_d->implBodyId)) {
+                    if(ZFBitTest(world->_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2BodyDetach)
+                            || ZFBitTest(_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2BodyDetach)
+                            ) {
+                        world->observerNotify(P2World::E_P2BodyDetach(), ZFArgs()
+                                .param0(body)
+                                );
+                    }
+
                     world->p2impl->bodyRemove(world, body);
+
+                    ZFArray *shapeList = body->p2_shapeList();
+                    for(zfindex i = shapeList->count() - 1; i != zfindexMax(); --i) {
+                        P2Shape *shape = shapeList->get(i);
+                        shape->_ZFP_P2Shape_d->implShapeId = b2_nullShapeId;
+                    }
                 }
                 body->_ZFP_P2Body_d->implBodyId = b2_nullBodyId;
                 body->_ZFP_P2Body_d->ownerUnit = zfnull;
@@ -2477,6 +2561,13 @@ void P2World::objectOnDeallocPrepare(void) {
         ZFArray *unitList = this->p2_unitList();
         for(zfindex iUnit = unitList->count() - 1; iUnit != zfindexMax(); --iUnit) {
             P2Unit *unit = unitList->get(iUnit);
+            if(ZFBitTest(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2UnitAttach)
+                    || ZFBitTest(_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2UnitAttach)
+                    ) {
+                this->observerNotify(P2World::E_P2UnitDetach(), ZFArgs()
+                        .param0(unit)
+                        );
+            }
             if(unit->p2_body()) {
                 CleanupBody::a(this, unit->p2_body());
             }
@@ -2503,14 +2594,14 @@ void P2World::objectOnDeallocPrepare(void) {
     zfsuper::objectOnDeallocPrepare();
 }
 
-ZFMETHOD_FUNC_DEFINE_3(ZFUIPoint, P2World_toLocalPosition
+ZFMETHOD_FUNC_DEFINE_3(ZFUIPoint, P2ToLocalPosition
         , ZFMP_IN(const ZFUIPoint &, relPosition)
         , ZFMP_IN(zffloat, relRotation)
         , ZFMP_IN(ZFUIPoint, worldPosition)
         ) {
     return b2Vec2ToZF(b2InvTransformPoint(b2TransformFromZF(relPosition, relRotation), b2Vec2FromZF(worldPosition)));
 }
-ZFMETHOD_FUNC_DEFINE_3(ZFUIPoint, P2World_toWorldPosition
+ZFMETHOD_FUNC_DEFINE_3(ZFUIPoint, P2ToWorldPosition
         , ZFMP_IN(const ZFUIPoint &, relPosition)
         , ZFMP_IN(zffloat, relRotation)
         , ZFMP_IN(ZFUIPoint, localPosition)
@@ -2532,12 +2623,21 @@ static void _ZFP_P2JointAttach(ZF_IN ZFObject *jointOwner, ZF_IN P2Joint *joint)
     }
 }
 static void _ZFP_P2JointDetach(ZF_IN P2Joint *joint) {
+    P2World *ownerWorld = joint->p2_ownerWorld();
     if(B2_IS_NON_NULL(joint->_ZFP_P2Joint_d->implJointId)) {
+        if(ownerWorld) {
+            if(ZFBitTest(ownerWorld->_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2JointDetach)
+                    || ZFBitTest(_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2JointDetach)
+                    ) {
+                ownerWorld->observerNotify(P2World::E_P2JointDetach(), ZFArgs()
+                        .param0(joint)
+                        );
+            }
+        }
         joint->p2_ownerBody0()->_ZFP_P2Body_d->bodyRefJointList.erase(joint);
         joint->p2_ownerBody1()->_ZFP_P2Body_d->bodyRefJointList.erase(joint);
         b2DestroyJoint(joint->_ZFP_P2Joint_d->implJointId);
     }
-    P2World *ownerWorld = joint->p2_ownerWorld();
     if(ownerWorld) {
         ownerWorld->_ZFP_P2World_d->pendingJoint.erase(joint);
     }
@@ -2578,6 +2678,22 @@ static void _ZFP_P2BodyDetach(ZF_IN P2Body *body, ZF_IN_OPT zfbool pendingBodyUp
 
                 joint->p2_ownerBody0()->p2_ownerUnit()->_ZFP_P2Unit_d->unitRefJointList.erase(joint);
                 joint->p2_ownerBody1()->p2_ownerUnit()->_ZFP_P2Unit_d->unitRefJointList.erase(joint);
+
+                if(ZFBitTest(ownerWorld->_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2JointDetach)
+                        || ZFBitTest(_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2JointDetach)
+                        ) {
+                    ownerWorld->observerNotify(P2World::E_P2JointDetach(), ZFArgs()
+                            .param0(joint)
+                            );
+                }
+            }
+
+            if(ZFBitTest(ownerWorld->_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2BodyDetach)
+                    || ZFBitTest(_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2BodyDetach)
+                    ) {
+                ownerWorld->observerNotify(P2World::E_P2BodyDetach(), ZFArgs()
+                        .param0(body)
+                        );
             }
 
             ZFArray *shapeList = body->p2_shapeList();
@@ -2608,8 +2724,26 @@ static void _ZFP_P2UnitAttach(ZF_IN P2World *ownerWorld, ZF_IN P2Unit *unit) {
     for(zfindex i = jointList->count() - 1; i != zfindexMax(); --i) {
         ownerWorld->_ZFP_P2World_d->pendingJoint[jointList->get(i)];
     }
+
+    if(ZFBitTest(ownerWorld->_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2UnitAttach)
+            || ZFBitTest(_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2UnitAttach)
+            ) {
+        ownerWorld->observerNotify(P2World::E_P2UnitAttach(), ZFArgs()
+                .param0(unit)
+                );
+    }
 }
 static void _ZFP_P2UnitDetach(ZF_IN P2Unit *unit) {
+    if(unit->_ZFP_P2Unit_d->ownerWorld) {
+        if(ZFBitTest(unit->_ZFP_P2Unit_d->ownerWorld->_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2UnitDetach)
+                || ZFBitTest(_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2UnitDetach)
+                ) {
+            unit->_ZFP_P2Unit_d->ownerWorld->observerNotify(P2World::E_P2UnitDetach(), ZFArgs()
+                    .param0(unit)
+                    );
+        }
+    }
+
     ZFBitUnset(unit->_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_unitVisible);
     if(unit->_ZFP_P2Unit_d->ownerWorld) {
         unit->_ZFP_P2Unit_d->ownerWorld->_ZFP_P2World_d->visibleUnits.erase(unit);
@@ -2635,7 +2769,7 @@ static void _ZFP_P2BodyImplMassUpdateRequest(ZF_IN P2Body *body) {
     if(ownerWorld) {
         ownerWorld->_ZFP_P2World_d->pendingBody[body];
     }
-    body->_ZFP_P2Body_d->massUpdateRequested = zftrue;
+    ZFBitSet(body->_ZFP_P2Body_d->stateFlag, _ZFP_P2BodyPrivate::stateFlag_massUpdateRequested);
 }
 
 // ============================================================
@@ -2679,14 +2813,22 @@ static void _ZFP_P2BodyImplCreate(ZF_IN P2World *world, ZF_IN P2Body *body) {
     body->_ZFP_P2Body_d->massUpdate();
 
     world->p2impl->bodyAdd(world, body);
+
+    if(ZFBitTest(world->_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2BodyAttach)
+            || ZFBitTest(_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2BodyAttach)
+            ) {
+        world->observerNotify(P2World::E_P2BodyAttach(), ZFArgs()
+                .param0(body)
+                );
+    }
 }
 
 static void _ZFP_P2WorldImplStep_pendingBody(ZF_IN P2World *world) {
     zfimplhashmap<P2Body *, zfbool> &pendingBody = world->_ZFP_P2World_d->pendingBody;
     for(zfimplhashmap<P2Body *, zfbool>::iterator it = pendingBody.begin(); it != pendingBody.end(); ++it) {
         P2Body *body = it->first;
-        if(body->_ZFP_P2Body_d->unitScaleUpdateRequested) {
-            body->_ZFP_P2Body_d->unitScaleUpdateRequested = zffalse;
+        if(ZFBitTest(body->_ZFP_P2Body_d->stateFlag, _ZFP_P2BodyPrivate::stateFlag_unitScaleUpdateRequested)) {
+            ZFBitUnset(body->_ZFP_P2Body_d->stateFlag, _ZFP_P2BodyPrivate::stateFlag_unitScaleUpdateRequested);
             P2Unit *ownerUnit = body->_ZFP_P2Body_d->ownerUnit;
             _ZFP_P2BodyDetach(body, zffalse);
             body->_ZFP_P2Body_d->ownerUnit = ownerUnit;
@@ -2746,6 +2888,14 @@ static void _ZFP_P2WorldImplStep_pendingJoint(ZF_IN P2World *world) {
             ownerBody0->_ZFP_P2Body_d->bodyRefJointList[joint] = zftrue;
             ownerBody1->_ZFP_P2Body_d->bodyRefJointList[joint] = zftrue;
         }
+
+        if(ZFBitTest(world->_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2JointAttach)
+                || ZFBitTest(_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2JointAttach)
+                ) {
+            world->observerNotify(P2World::E_P2JointAttach(), ZFArgs()
+                    .param0(joint)
+                    );
+        }
     }
     pendingJoint.clear();
 }
@@ -2791,15 +2941,15 @@ static void _ZFP_P2WorldImplStep_events(ZF_IN P2World *world) {
                     P2Unit *unit0 = dst.p2_shape0->p2_ownerUnit();
                     P2Unit *unit1 = dst.p2_shape1->p2_ownerUnit();
                     if(unit0 && unit1) {
-                        if(ZFBitTest(unit0->_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnSensorEnter)
-                                || ZFBitTest(_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnSensorEnter)
+                        if(ZFBitTest(unit0->_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2SensorEnter)
+                                || ZFBitTest(_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2SensorEnter)
                                 ) {
-                            unit0->observerNotify(P2Unit::E_P2UnitOnSensorEnter(), ZFArgs().param0(unit1));
+                            unit0->observerNotify(P2Unit::E_P2SensorEnter(), ZFArgs().param0(unit1));
                         }
-                        if(ZFBitTest(unit1->_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnVisitorEnter)
-                                || ZFBitTest(_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnVisitorEnter)
+                        if(ZFBitTest(unit1->_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2SensorVisitorEnter)
+                                || ZFBitTest(_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2SensorVisitorEnter)
                                 ) {
-                            unit1->observerNotify(P2Unit::E_P2UnitOnVisitorEnter(), ZFArgs().param0(unit0));
+                            unit1->observerNotify(P2Unit::E_P2SensorVisitorEnter(), ZFArgs().param0(unit0));
                         }
                     }
                 }
@@ -2821,15 +2971,15 @@ static void _ZFP_P2WorldImplStep_events(ZF_IN P2World *world) {
                     P2Unit *unit0 = dst.p2_shape0->p2_ownerUnit();
                     P2Unit *unit1 = dst.p2_shape1->p2_ownerUnit();
                     if(unit0 && unit1) {
-                        if(ZFBitTest(unit0->_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnSensorExit)
-                                || ZFBitTest(_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnSensorExit)
+                        if(ZFBitTest(unit0->_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2SensorExit)
+                                || ZFBitTest(_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2SensorExit)
                                 ) {
-                            unit0->observerNotify(P2Unit::E_P2UnitOnSensorExit(), ZFArgs().param0(unit1));
+                            unit0->observerNotify(P2Unit::E_P2SensorExit(), ZFArgs().param0(unit1));
                         }
-                        if(ZFBitTest(unit1->_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnVisitorExit)
-                                || ZFBitTest(_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnVisitorExit)
+                        if(ZFBitTest(unit1->_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2SensorVisitorExit)
+                                || ZFBitTest(_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2SensorVisitorExit)
                                 ) {
-                            unit1->observerNotify(P2Unit::E_P2UnitOnVisitorExit(), ZFArgs().param0(unit0));
+                            unit1->observerNotify(P2Unit::E_P2SensorVisitorExit(), ZFArgs().param0(unit0));
                         }
                     }
                 }
@@ -2864,15 +3014,15 @@ static void _ZFP_P2WorldImplStep_events(ZF_IN P2World *world) {
                     P2Unit *unit0 = dst.p2_shape0->p2_ownerUnit();
                     P2Unit *unit1 = dst.p2_shape1->p2_ownerUnit();
                     if(unit0 && unit1) {
-                        if(ZFBitTest(unit0->_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnContactEnter)
-                                || ZFBitTest(_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnContactEnter)
+                        if(ZFBitTest(unit0->_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2ContactEnter)
+                                || ZFBitTest(_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2ContactEnter)
                                 ) {
-                            unit0->observerNotify(P2Unit::E_P2UnitOnContactEnter(), ZFArgs().param0(unit1));
+                            unit0->observerNotify(P2Unit::E_P2ContactEnter(), ZFArgs().param0(unit1));
                         }
-                        if(ZFBitTest(unit1->_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnContactEnter)
-                                || ZFBitTest(_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnContactEnter)
+                        if(ZFBitTest(unit1->_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2ContactEnter)
+                                || ZFBitTest(_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2ContactEnter)
                                 ) {
-                            unit1->observerNotify(P2Unit::E_P2UnitOnContactEnter(), ZFArgs().param0(unit0));
+                            unit1->observerNotify(P2Unit::E_P2ContactEnter(), ZFArgs().param0(unit0));
                         }
                     }
                 }
@@ -2894,15 +3044,15 @@ static void _ZFP_P2WorldImplStep_events(ZF_IN P2World *world) {
                     P2Unit *unit0 = dst.p2_shape0->p2_ownerUnit();
                     P2Unit *unit1 = dst.p2_shape1->p2_ownerUnit();
                     if(unit0 && unit1) {
-                        if(ZFBitTest(unit0->_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnContactExit)
-                                || ZFBitTest(_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnContactExit)
+                        if(ZFBitTest(unit0->_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2ContactExit)
+                                || ZFBitTest(_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2ContactExit)
                                 ) {
-                            unit0->observerNotify(P2Unit::E_P2UnitOnContactExit(), ZFArgs().param0(unit1));
+                            unit0->observerNotify(P2Unit::E_P2ContactExit(), ZFArgs().param0(unit1));
                         }
-                        if(ZFBitTest(unit1->_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnContactExit)
-                                || ZFBitTest(_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnContactExit)
+                        if(ZFBitTest(unit1->_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2ContactExit)
+                                || ZFBitTest(_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2ContactExit)
                                 ) {
-                            unit1->observerNotify(P2Unit::E_P2UnitOnContactExit(), ZFArgs().param0(unit0));
+                            unit1->observerNotify(P2Unit::E_P2ContactExit(), ZFArgs().param0(unit0));
                         }
                     }
                 }
@@ -2961,10 +3111,10 @@ static void _ZFP_P2WorldImplStep_visibleUnitsUpdate(ZF_IN P2World *world) {
         if(visibleUnitsPrev.find(unit) == visibleUnitsPrev.end()) {
             event->p2_unitEnterList.add(unit);
             ZFBitSet(unit->_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_unitVisible);
-            if(ZFBitTest(unit->_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnVisibilityUpdate)
-                    || ZFBitTest(_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnVisibilityUpdate)
+            if(ZFBitTest(unit->_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2VisibilityUpdate)
+                    || ZFBitTest(_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2VisibilityUpdate)
                     ) {
-                unit->observerNotify(P2Unit::E_P2UnitOnVisibilityUpdate());
+                unit->observerNotify(P2Unit::E_P2VisibilityUpdate());
             }
         }
     }
@@ -2973,10 +3123,10 @@ static void _ZFP_P2WorldImplStep_visibleUnitsUpdate(ZF_IN P2World *world) {
         if(visibleUnits.find(unit) == visibleUnits.end()) {
             event->p2_unitExitList.add(unit);
             ZFBitUnset(unit->_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_unitVisible);
-            if(ZFBitTest(unit->_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnVisibilityUpdate)
-                    || ZFBitTest(_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2UnitOnVisibilityUpdate)
+            if(ZFBitTest(unit->_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2VisibilityUpdate)
+                    || ZFBitTest(_ZFP_P2Unit_stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2VisibilityUpdate)
                     ) {
-                unit->observerNotify(P2Unit::E_P2UnitOnVisibilityUpdate());
+                unit->observerNotify(P2Unit::E_P2VisibilityUpdate());
             }
         }
     }

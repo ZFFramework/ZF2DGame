@@ -697,7 +697,7 @@ public:
      * called when unit visibility changed by #P2World::p2_UIVisibleArea,
      * current visibility can be checked by #p2_unitVisible
      */
-    ZFEVENT(P2UnitOnVisibilityUpdate)
+    ZFEVENT(P2VisibilityUpdate)
 
     /**
      * @brief see #ZFObject::observerNotify
@@ -706,7 +706,7 @@ public:
      * and this unit is the sensor\n
      * param0 is the visitor #P2Unit
      */
-    ZFEVENT(P2UnitOnSensorEnter)
+    ZFEVENT(P2SensorEnter)
     /**
      * @brief see #ZFObject::observerNotify
      *
@@ -714,7 +714,7 @@ public:
      * and this unit is the sensor\n
      * param0 is the visitor #P2Unit
      */
-    ZFEVENT(P2UnitOnSensorExit)
+    ZFEVENT(P2SensorExit)
     /**
      * @brief see #ZFObject::observerNotify
      *
@@ -722,7 +722,7 @@ public:
      * and this unit is the visitor\n
      * param0 is the sensor #P2Unit
      */
-    ZFEVENT(P2UnitOnVisitorEnter)
+    ZFEVENT(P2SensorVisitorEnter)
     /**
      * @brief see #ZFObject::observerNotify
      *
@@ -730,7 +730,7 @@ public:
      * and this unit is the visitor\n
      * param0 is the sensor #P2Unit
      */
-    ZFEVENT(P2UnitOnVisitorExit)
+    ZFEVENT(P2SensorVisitorExit)
 
     /**
      * @brief see #ZFObject::observerNotify
@@ -738,14 +738,14 @@ public:
      * called when any child shape of this unit got #P2ContactEvent::p2_contactEnterList\n
      * param0 is the other #P2Unit
      */
-    ZFEVENT(P2UnitOnContactEnter)
+    ZFEVENT(P2ContactEnter)
     /**
      * @brief see #ZFObject::observerNotify
      *
      * called when any child shape of this unit got #P2ContactEvent::p2_contactExitList\n
      * param0 is the other #P2Unit
      */
-    ZFEVENT(P2UnitOnContactExit)
+    ZFEVENT(P2ContactExit)
 
 public:
     /** @brief see #P2World */
@@ -995,6 +995,43 @@ public:
     /**
      * @brief see #ZFObject::observerNotify
      *
+     * called when unit attached, param0 is the #P2Unit
+     */
+    ZFEVENT(P2UnitAttach)
+    /**
+     * @brief see #ZFObject::observerNotify
+     *
+     * called when unit detached, param0 is the #P2Unit
+     */
+    ZFEVENT(P2UnitDetach)
+    /**
+     * @brief see #ZFObject::observerNotify
+     *
+     * called when body attached, param0 is the #P2Body
+     */
+    ZFEVENT(P2BodyAttach)
+    /**
+     * @brief see #ZFObject::observerNotify
+     *
+     * called when body detached, param0 is the #P2Body
+     */
+    ZFEVENT(P2BodyDetach)
+    /**
+     * @brief see #ZFObject::observerNotify
+     *
+     * called when joint attached, param0 is the #P2Joint
+     */
+    ZFEVENT(P2JointAttach)
+    /**
+     * @brief see #ZFObject::observerNotify
+     *
+     * called when joint detached, param0 is the #P2Joint
+     */
+    ZFEVENT(P2JointDetach)
+
+    /**
+     * @brief see #ZFObject::observerNotify
+     *
      * called before each simulation step
      */
     ZFEVENT(P2StepPrev)
@@ -1196,13 +1233,13 @@ public:
 };
 
 /** @brief see #P2World */
-ZFMETHOD_FUNC_DECLARE_3(ZFLIB_ZF2DGame, ZFUIPoint, P2World_toLocalPosition
+ZFMETHOD_FUNC_DECLARE_3(ZFLIB_ZF2DGame, ZFUIPoint, P2ToLocalPosition
         , ZFMP_IN(const ZFUIPoint &, relPosition)
         , ZFMP_IN(zffloat, relRotation)
         , ZFMP_IN(ZFUIPoint, worldPosition)
         )
 /** @brief see #P2World */
-ZFMETHOD_FUNC_DECLARE_3(ZFLIB_ZF2DGame, ZFUIPoint, P2World_toWorldPosition
+ZFMETHOD_FUNC_DECLARE_3(ZFLIB_ZF2DGame, ZFUIPoint, P2ToWorldPosition
         , ZFMP_IN(const ZFUIPoint &, relPosition)
         , ZFMP_IN(zffloat, relRotation)
         , ZFMP_IN(ZFUIPoint, localPosition)
