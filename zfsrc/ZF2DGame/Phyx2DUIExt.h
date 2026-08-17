@@ -52,6 +52,11 @@ zfclass ZFLIB_ZF2DGame P2WorldView : zfextend ZFUIView {
     ZFOBJECT_DECLARE(P2WorldView, ZFUIView)
 
 public:
+    /** @brief draw debug colors to indicates all body/shape/joint */
+    ZFPROPERTY_ASSIGN(zfbool, debugDraw)
+    ZFPROPERTY_ON_ATTACH_DECLARE(zfbool, debugDraw)
+    ZFPROPERTY_ON_DETACH_DECLARE(zfbool, debugDraw)
+
     /**
      * @brief tiled bg automatically updated with #P2World::p2_UIOffset
      *
@@ -66,11 +71,6 @@ public:
     /** @brief see #tileBg */
     ZFPROPERTY_ASSIGN(ZFCoreArray<zfautoT<TileView> >, tileFg)
     ZFPROPERTY_ON_UPDATE_DECLARE(ZFCoreArray<zfautoT<TileView> >, tileFg)
-
-    /** @brief draw debug colors to indicates all body/shape/joint */
-    ZFPROPERTY_ASSIGN(zfbool, debugDraw)
-    ZFPROPERTY_ON_ATTACH_DECLARE(zfbool, debugDraw)
-    ZFPROPERTY_ON_DETACH_DECLARE(zfbool, debugDraw)
 
     /** @brief see #tileBg, make #tileBg and #tileFg auto update by #P2World::p2_UIOffset */
     ZFMETHOD_DECLARE_0(void, tileUpdateByUI)
@@ -104,6 +104,16 @@ protected:
     virtual void objectOnInitFinish(void);
     zfoverride
     virtual void objectOnDeallocPrepare(void);
+    zfoverride
+    virtual void observerOnAdd(ZF_IN zfidentity eventId) {
+        zfsuper::observerOnAdd(eventId);
+        ZFObserver::forwardOnAdd(zfcast(P2World *, this), eventId);
+    }
+    zfoverride
+    virtual void observerOnRemove(ZF_IN zfidentity eventId) {
+        ZFObserver::forwardOnRemove(zfcast(P2World *, this), eventId);
+        zfsuper::observerOnRemove(eventId);
+    }
     zfoverride
     virtual void layoutOnLayout(ZF_IN const ZFUIRect &bounds);
 private:

@@ -257,21 +257,20 @@ ZFMETHOD_FUNC_DEFINE_6(void, P2CoordinateToRectT
         , ZFMP_IN_OPT(zffloat, rotation, 0)
         , ZFMP_IN_OPT(const ZFUIPoint &, centerOfMass, ZFUIPointZero())
         ) {
-    zffloat x = position.x;
-    zffloat y = position.y;
+    zffloat r = (zffloat)(rotation * B2_PI / 180);
+    zffloat cr = cos(r);
+    zffloat sr = sin(r);
+    zffloat x = position.x + centerOfMass.x * cr + centerOfMass.y * sr - centerOfMass.x;
+    zffloat y = position.y - centerOfMass.x * sr + centerOfMass.y * cr - centerOfMass.y;
     zffloat w = aabbLocal.width;
     zffloat h = aabbLocal.height;
     zffloat s = world->p2_UIScale();
     zffloat H = zfcast(P2WorldView *, world)->height() / s;
     const ZFUIPoint &offset = world->p2_UIOffset();
-
     zffloat dx = w / 2 - (centerOfMass.x - aabbLocal.x);
     zffloat dy = h / 2 - (centerOfMass.y - aabbLocal.y);
-    zffloat r = (zffloat)(rotation * B2_PI / 180);
-    zffloat cr = cos(r);
-    zffloat sr = sin(r);
 
-    rect.x = (x + (dx * cr + dy * sr) - w / 2 - offset.x) * s;
+    rect.x = (x + (dx * cr + dy * sr) - w / 2 + offset.x) * s;
     rect.y = (H - (y + (-dx * sr + dy * cr)) - h / 2 - offset.y) * s;
     rect.width = w * s;
     rect.height = h * s;
@@ -286,7 +285,7 @@ ZFMETHOD_FUNC_DEFINE_5(ZFUIRect, P2CoordinateToRect
     ZFUIRect rect;
     P2CoordinateToRectT(
             rect
-            , worldView
+            , world
             , position
             , aabbLocal
             , rotation
@@ -315,7 +314,7 @@ ZFMETHOD_FUNC_DEFINE_2(ZFUIRect, P2AABBToRect
     ZFUIRect rect;
     P2AABBToRectT(
             rect
-            , worldView
+            , world
             , aabb
             );
     return rect;
@@ -341,7 +340,7 @@ ZFMETHOD_FUNC_DEFINE_2(ZFUIRect, P2AABBFromRect
     ZFUIRect aabb;
     P2AABBFromRectT(
             aabb
-            , worldView
+            , world
             , rect
             );
     return rect;
