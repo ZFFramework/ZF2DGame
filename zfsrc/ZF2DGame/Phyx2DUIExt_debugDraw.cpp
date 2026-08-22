@@ -5,7 +5,18 @@
 ZF_NAMESPACE_GLOBAL_BEGIN
 
 zfclass _ZFP_I_P2DebugDrawBody : zfextend ZFUIView {
-    ZFOBJECT_DECLARE(_ZFP_I_P2DebugDrawBody, ZFUIView)
+    ZFOBJECT_DECLARE_WITH_CUSTOM_CTOR(_ZFP_I_P2DebugDrawBody, ZFUIView)
+public:
+    zffloat p2_UIScale;
+    ZFCoreArray<zfautoT<ZFUIView> > shapeDebugList;
+    zfautoT<ZFUIView> massCenterDebug;
+protected:
+    _ZFP_I_P2DebugDrawBody(void)
+    : p2_UIScale(-1)
+    , shapeDebugList()
+    , massCenterDebug()
+    {
+    }
 };
 zfclass _ZFP_I_P2DebugDrawBodyCenter : zfextend ZFUIView {
     ZFOBJECT_DECLARE(_ZFP_I_P2DebugDrawBodyCenter, ZFUIView)
@@ -49,8 +60,25 @@ public:
         _ZFP_I_P2DebugDraw *d = zfargs.sender()->objectTag(zftext("_ZFP_P2DebugDraw_world"));
         if(d) {
             P2BodyMoveEvent *event = zfargs.param0();
+            ZFCoreArray<P2Joint *> jointsUpdated;
             for(zfindex i = event->p2_moveEventList.count() - 1; i != zfindexMax(); --i) {
-                d->bodyDebugAttach(event->p2_moveEventList[i].p2_body);
+                ZFArray *jointList = event->p2_moveEventList[i].p2_body->p2_refJointList();
+                for(zfindex i = jointList->count() - 1; i != zfindexMax(); --i) {
+                    P2Joint *joint = jointList->get(i);
+                    if(!jointsUpdated.isContain(joint)) {
+                        jointsUpdated.add(joint);
+                        d->jointDebugAttach(joint);
+                    }
+                }
+            }
+        }
+    }
+    static void uiOnUpdate(ZF_IN const ZFArgs &zfargs) {
+        P2World *world = zfargs.sender();
+        if(world->p2_UIScaleChanged()) {
+            _ZFP_I_P2DebugDraw *d = world->objectTag(zftext("_ZFP_P2DebugDraw_world"));
+            if(d) {
+                d->updateAll(world);
             }
         }
     }
@@ -63,44 +91,62 @@ public:
         if(!world) {
             return;
         }
-        ZFUIView *v = body->objectTag(zftext("_ZFP_P2DebugDraw_body"));
+        _ZFP_I_P2DebugDrawBody *v = body->objectTag(zftext("_ZFP_P2DebugDraw_body"));
         if(!v) {
             zfobj<_ZFP_I_P2DebugDrawBody> t;
             v = t;
             body->objectTag(zftext("_ZFP_P2DebugDraw_body"), v);
             zfcast(ZFUIView *, body)->internalFgView(v)->sizeFill();
             v->bgColor(ZFUIColorRandom(0.1f));
+        }
+        else {
+            if(v->p2_UIScale == world->p2_UIScale()) {
+                return;
+            }
+        }
 
-            zffloat s = world->p2_UIScale();
-            ZFUIRect bodyAABB = body->p2_AABBLocal();
+        zffloat s = world->p2_UIScale();
+        v->p2_UIScale = s;
+        ZFUIRect bodyAABB = body->p2_AABBLocal();
+
+        {
             ZFArray *shapeList = body->p2_shapeList();
-            for(zfindex i = 0; i < shapeList->count(); ++i) {
-                P2Shape *shape = shapeList->get(i);
+            while(v->shapeDebugList.count() > shapeList->count()) {
+                v->shapeDebugList.removeLastAndGet()->removeFromParent();
+            }
+            while(v->shapeDebugList.count() < shapeList->count()) {
                 zfobj<_ZFP_I_P2DebugDrawShape> sv;
                 sv->bgColor(ZFUIColorRandom(0.4f));
                 v->child(sv);
+                v->shapeDebugList.add(sv);
+            }
+            for(zfindex i = 0; i < shapeList->count(); ++i) {
+                P2Shape *shape = shapeList->get(i);
                 ZFUIRect shapeAABB = shape->p2_AABBLocal();
-                sv->viewFrame(ZFUIRectCreate(
+                v->shapeDebugList[i]->viewFrame(ZFUIRectCreate(
                             (shapeAABB.x - bodyAABB.x) * s
                             , (bodyAABB.y + bodyAABB.height - (shapeAABB.y + shapeAABB.height)) * s
                             , shapeAABB.width * s
                             , shapeAABB.height * s
                             ));
             }
+        }
 
-            {
-                ZFUIPoint centerOfMass = body->p2_centerOfMass();
+        {
+            if(!v->massCenterDebug) {
                 zfobj<_ZFP_I_P2DebugDrawBodyCenter> sv;
+                v->massCenterDebug = sv;
                 sv->bgColor(ZFUIColorRandom(0.8f));
-                v->child(sv);
-                zffloat size = 8;
-                sv->viewFrame(ZFUIRectCreate(
-                            (centerOfMass.x - bodyAABB.x) * s - size / 2
-                            , (bodyAABB.y + bodyAABB.height - centerOfMass.y) * s - size / 2
-                            , size
-                            , size
-                            ));
+                v->internalFgView(sv);
             }
+            ZFUIPoint centerOfMass = body->p2_centerOfMass();
+            zffloat size = 8;
+            v->massCenterDebug->viewFrame(ZFUIRectCreate(
+                        (centerOfMass.x - bodyAABB.x) * s - size / 2
+                        , (bodyAABB.y + bodyAABB.height - centerOfMass.y) * s - size / 2
+                        , size
+                        , size
+                        ));
         }
     }
     void bodyDebugDetach(ZF_IN P2Body *body) {
@@ -151,6 +197,20 @@ public:
         }
     }
 public:
+    void updateAll(ZF_IN P2World *world) {
+        ZFArray *unitList = world->p2_unitList();
+        for(zfindex iUnit = unitList->count() - 1; iUnit != zfindexMax(); --iUnit) {
+            P2Unit *unit = unitList->get(iUnit);
+            this->bodyDebugAttach(unit->p2_body());
+            ZFArray *partList = unit->p2_partList();
+            for(zfindex iPart = partList->count() - 1; iPart != zfindexMax(); --iPart) {
+                this->bodyDebugAttach(partList->get(iPart));
+            }
+            this->jointListDebugAttach(unit->p2_jointList());
+        }
+
+        this->jointListDebugAttach(world->p2_jointList());
+    }
     void jointListDebugAttach(ZF_IN ZFArray *jointList) {
         for(zfindex iJoint = jointList->count() - 1; iJoint != zfindexMax(); --iJoint) {
             this->jointDebugAttach(jointList->get(iJoint));
@@ -179,20 +239,9 @@ static void _ZFP_P2DebugDrawAttach(ZF_IN P2WorldView *worldView, ZF_IN P2World *
     world->observerAdd(P2World::E_P2JointAttach(), ZFCallbackForFunc(_ZFP_I_P2DebugDraw::jointOnAttach));
     world->observerAdd(P2World::E_P2JointDetach(), ZFCallbackForFunc(_ZFP_I_P2DebugDraw::jointOnDetach));
     world->observerAdd(P2World::E_P2BodyMoveEvent(), ZFCallbackForFunc(_ZFP_I_P2DebugDraw::bodyOnMove));
+    world->observerAdd(P2World::E_P2UIUpdate(), ZFCallbackForFunc(_ZFP_I_P2DebugDraw::uiOnUpdate));
 
-    {
-        ZFArray *unitList = world->p2_unitList();
-        for(zfindex iUnit = unitList->count() - 1; iUnit != zfindexMax(); --iUnit) {
-            P2Unit *unit = unitList->get(iUnit);
-            d->bodyDebugAttach(unit->p2_body());
-            ZFArray *partList = unit->p2_partList();
-            for(zfindex iPart = partList->count() - 1; iPart != zfindexMax(); --iPart) {
-                d->bodyDebugAttach(partList->get(iPart));
-            }
-            d->jointListDebugAttach(unit->p2_jointList());
-        }
-    }
-    d->jointListDebugAttach(world->p2_jointList());
+    d->updateAll(world);
 }
 static void _ZFP_P2DebugDrawDetach(ZF_IN P2WorldView *worldView, ZF_IN P2World *world) {
     zfautoT<_ZFP_I_P2DebugDraw> d = worldView->objectTagRemoveAndGet(zftext("_ZFP_P2DebugDraw_world"));
@@ -204,6 +253,7 @@ static void _ZFP_P2DebugDrawDetach(ZF_IN P2WorldView *worldView, ZF_IN P2World *
     world->observerRemove(P2World::E_P2JointAttach(), ZFCallbackForFunc(_ZFP_I_P2DebugDraw::jointOnAttach));
     world->observerRemove(P2World::E_P2JointDetach(), ZFCallbackForFunc(_ZFP_I_P2DebugDraw::jointOnDetach));
     world->observerRemove(P2World::E_P2BodyMoveEvent(), ZFCallbackForFunc(_ZFP_I_P2DebugDraw::bodyOnMove));
+    world->observerRemove(P2World::E_P2UIUpdate(), ZFCallbackForFunc(_ZFP_I_P2DebugDraw::uiOnUpdate));
 
     {
         ZFArray *unitList = world->p2_unitList();

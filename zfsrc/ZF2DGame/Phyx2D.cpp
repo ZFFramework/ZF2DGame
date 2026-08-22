@@ -150,7 +150,7 @@ zfclassNotPOD _ZFP_P2BodyPrivate {
 public:
     b2BodyId implBodyId;
     P2Unit *ownerUnit;
-    zfimplhashmap<P2Joint *, zfbool> bodyRefJointList;
+    zfobj<ZFArray> bodyRefJointList;
     ZFUISize bodySize; // bodySize.width==-1 if needs update
     ZFUIPoint centerOfMass; // bodySize.width==-1 if needs update, relative to bodySize
 
@@ -228,7 +228,7 @@ public:
 zfclassNotPOD _ZFP_P2UnitPrivate {
 public:
     P2World *ownerWorld;
-    zfimplhashmap<P2Joint *, zfbool> unitRefJointList;
+    zfobj<ZFArray> unitRefJointList;
 
     enum {
         stateFlag_unitVisible = 1 << 0,
@@ -318,18 +318,27 @@ public:
     enum {
         stateFlag_stepRunning = 1 << 0,
         stateFlag_UIUpdateFlag = 1 << 1,
-        stateFlag_E_P2UnitAttach = 1 << 2,
-        stateFlag_E_P2UnitDetach = 1 << 3,
-        stateFlag_E_P2BodyAttach = 1 << 4,
-        stateFlag_E_P2BodyDetach = 1 << 5,
-        stateFlag_E_P2JointAttach = 1 << 6,
-        stateFlag_E_P2JointDetach = 1 << 7,
-        stateFlag_E_P2StepPrev = 1 << 8,
-        stateFlag_E_P2StepPost = 1 << 9,
-        stateFlag_E_P2UnitVisibilityEvent = 1 << 10,
-        stateFlag_E_P2BodyMoveEvent = 1 << 11,
-        stateFlag_E_P2SensorEvent = 1 << 12,
-        stateFlag_E_P2ContactEvent = 1 << 13,
+        stateFlag_UIOffsetChanged = 1 << 2,
+        stateFlag_UIScaleChanged = 1 << 3,
+        stateFlag_UIVisibleAreaChanged = 1 << 4,
+        stateFlag_UIChangedMask = 0
+            | stateFlag_UIOffsetChanged
+            | stateFlag_UIScaleChanged
+            | stateFlag_UIVisibleAreaChanged
+            ,
+        stateFlag_E_P2UnitAttach = 1 << 5,
+        stateFlag_E_P2UnitDetach = 1 << 6,
+        stateFlag_E_P2BodyAttach = 1 << 7,
+        stateFlag_E_P2BodyDetach = 1 << 8,
+        stateFlag_E_P2JointAttach = 1 << 9,
+        stateFlag_E_P2JointDetach = 1 << 10,
+        stateFlag_E_P2StepPrev = 1 << 11,
+        stateFlag_E_P2StepPost = 1 << 12,
+        stateFlag_E_P2UnitVisibilityEvent = 1 << 13,
+        stateFlag_E_P2BodyMoveEvent = 1 << 14,
+        stateFlag_E_P2SensorEvent = 1 << 15,
+        stateFlag_E_P2ContactEvent = 1 << 16,
+        stateFlag_E_P2UIUpdate = 1 << 17,
     };
     zfuint stateFlag;
 
@@ -390,6 +399,7 @@ ZF_GLOBAL_INITIALIZER_INIT_WITH_LEVEL(P2World_stateFlag, ZFLevelZFFrameworkStati
     ZFGlobalObserver().observerHasAddStateAttach(P2World::E_P2BodyMoveEvent(), &_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2BodyMoveEvent);
     ZFGlobalObserver().observerHasAddStateAttach(P2World::E_P2SensorEvent(), &_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2SensorEvent);
     ZFGlobalObserver().observerHasAddStateAttach(P2World::E_P2ContactEvent(), &_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2ContactEvent);
+    ZFGlobalObserver().observerHasAddStateAttach(P2World::E_P2UIUpdate(), &_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2UIUpdate);
 }
 ZF_GLOBAL_INITIALIZER_DESTROY(P2World_stateFlag) {
     ZFGlobalObserver().observerHasAddStateDetach(P2World::E_P2UnitAttach(), &_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2UnitAttach);
@@ -404,6 +414,7 @@ ZF_GLOBAL_INITIALIZER_DESTROY(P2World_stateFlag) {
     ZFGlobalObserver().observerHasAddStateDetach(P2World::E_P2BodyMoveEvent(), &_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2BodyMoveEvent);
     ZFGlobalObserver().observerHasAddStateDetach(P2World::E_P2SensorEvent(), &_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2SensorEvent);
     ZFGlobalObserver().observerHasAddStateDetach(P2World::E_P2ContactEvent(), &_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2ContactEvent);
+    ZFGlobalObserver().observerHasAddStateDetach(P2World::E_P2UIUpdate(), &_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2UIUpdate);
 }
 ZF_GLOBAL_INITIALIZER_END(P2World_stateFlag)
 void P2World::observerOnAdd(ZF_IN zfidentity eventId) {
@@ -421,6 +432,7 @@ void P2World::observerOnAdd(ZF_IN zfidentity eventId) {
     else if(eventId == P2World::E_P2BodyMoveEvent()) {ZFBitSet(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2BodyMoveEvent);}
     else if(eventId == P2World::E_P2SensorEvent()) {ZFBitSet(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2SensorEvent);}
     else if(eventId == P2World::E_P2ContactEvent()) {ZFBitSet(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2ContactEvent);}
+    else if(eventId == P2World::E_P2UIUpdate()) {ZFBitSet(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2UIUpdate);}
 }
 void P2World::observerOnRemove(ZF_IN zfidentity eventId) {
     zfsuper::observerOnRemove(eventId);
@@ -437,6 +449,7 @@ void P2World::observerOnRemove(ZF_IN zfidentity eventId) {
     else if(eventId == P2World::E_P2BodyMoveEvent()) {ZFBitUnset(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2BodyMoveEvent);}
     else if(eventId == P2World::E_P2SensorEvent()) {ZFBitUnset(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2SensorEvent);}
     else if(eventId == P2World::E_P2ContactEvent()) {ZFBitUnset(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2ContactEvent);}
+    else if(eventId == P2World::E_P2UIUpdate()) {ZFBitUnset(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2UIUpdate);}
 }
 ZFEVENT_REGISTER(P2World, P2UnitAttach)
 ZFEVENT_REGISTER(P2World, P2UnitDetach)
@@ -450,6 +463,7 @@ ZFEVENT_REGISTER(P2World, P2UnitVisibilityEvent)
 ZFEVENT_REGISTER(P2World, P2BodyMoveEvent)
 ZFEVENT_REGISTER(P2World, P2SensorEvent)
 ZFEVENT_REGISTER(P2World, P2ContactEvent)
+ZFEVENT_REGISTER(P2World, P2UIUpdate)
 
 // ============================================================
 ZFOBJECT_REGISTER(P2Shape)
@@ -1645,22 +1659,18 @@ ZFMETHOD_DEFINE_1(P2Body, P2Joint *, p2_jointFind
         , ZFMP_IN(const zfstring &, jointId)
         ) {
     if(jointId) {
-        for(zfimplhashmap<P2Joint *, zfbool>::iterator it = _ZFP_P2Body_d->bodyRefJointList.begin(); it != _ZFP_P2Body_d->bodyRefJointList.end(); ++it) {
-            P2Joint *item = it->first;
-            if(item->p2_jointId() == jointId) {
-                return item;
+        for(zfindex i = _ZFP_P2Body_d->bodyRefJointList->count() - 1; i != zfindexMax(); --i) {
+            P2Joint *joint = _ZFP_P2Body_d->bodyRefJointList->get(i);
+            if(joint->p2_jointId() == jointId) {
+                return joint;
             }
         }
     }
     return zfnull;
 }
 
-ZFMETHOD_DEFINE_0(P2Body, zfautoT<ZFContainer>, p2_refJointList) {
-    zfobj<ZFHashSet> ret;
-    for(zfimplhashmap<P2Joint *, zfbool>::iterator it = _ZFP_P2Body_d->bodyRefJointList.begin(); it != _ZFP_P2Body_d->bodyRefJointList.end(); ++it) {
-        ret->add(it->first);
-    }
-    return ret;
+ZFMETHOD_DEFINE_0(P2Body, ZFArray *, p2_refJointList) {
+    return _ZFP_P2Body_d->bodyRefJointList;
 }
 
 ZFPROPERTY_ON_UPDATE_DEFINE(P2Body, zfstring, p2_bodyId) {
@@ -2118,8 +2128,8 @@ ZFMETHOD_DEFINE_1(P2Unit, P2Joint *, p2_jointFind
                 return joint;
             }
         }
-        for(zfimplhashmap<P2Joint *, zfbool>::iterator it = _ZFP_P2Unit_d->unitRefJointList.begin(); it != _ZFP_P2Unit_d->unitRefJointList.end(); ++it) {
-            P2Joint *joint = it->first;
+        for(zfindex i = _ZFP_P2Unit_d->unitRefJointList->count() - 1; i != zfindexMax(); ++i) {
+            P2Joint *joint = _ZFP_P2Unit_d->unitRefJointList->get(i);
             if(joint->p2_jointId() == jointId) {
                 return joint;
             }
@@ -2128,12 +2138,8 @@ ZFMETHOD_DEFINE_1(P2Unit, P2Joint *, p2_jointFind
     return zfnull;
 }
 
-ZFMETHOD_DEFINE_0(P2Unit, zfautoT<ZFContainer>, p2_refJointList) {
-    zfobj<ZFHashSet> ret;
-    for(zfimplhashmap<P2Joint *, zfbool>::iterator it = _ZFP_P2Unit_d->unitRefJointList.begin(); it != _ZFP_P2Unit_d->unitRefJointList.end(); ++it) {
-        ret->add(it->first);
-    }
-    return ret;
+ZFMETHOD_DEFINE_0(P2Unit, ZFArray *, p2_refJointList) {
+    return _ZFP_P2Unit_d->unitRefJointList;
 }
 
 ZFMETHOD_DEFINE_0(P2Unit, zfbool, p2_unitVisible) {
@@ -2212,6 +2218,7 @@ ZFPROPERTY_ON_UPDATE_DEFINE(P2World, ZFUIPoint, p2_gravity) {
 
 ZFPROPERTY_ON_UPDATE_DEFINE(P2World, ZFUIPoint, p2_UIOffset) {
     if(propertyValue != propertyValueOld) {
+        ZFBitSet(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_UIOffsetChanged);
         ZFBitSet(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_UIUpdateFlag);
     }
 }
@@ -2220,6 +2227,7 @@ ZFPROPERTY_ON_UPDATE_DEFINE(P2World, zffloat, p2_UIScale) {
         propertyValue = 1;
     }
     if(propertyValue != propertyValueOld) {
+        ZFBitSet(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_UIScaleChanged);
         ZFBitSet(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_UIUpdateFlag);
     }
 }
@@ -2233,7 +2241,21 @@ ZFMETHOD_DEFINE_0(P2World, const ZFUIRect &, p2_UIVisibleArea) {
 ZFMETHOD_DEFINE_1(P2World, void, p2_UIVisibleArea
         , ZFMP_IN(const ZFUIRect &, v)
         ) {
-    _ZFP_P2World_d->visibleArea = v;
+    if(_ZFP_P2World_d->visibleArea != v) {
+        _ZFP_P2World_d->visibleArea = v;
+        ZFBitSet(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_UIVisibleAreaChanged);
+        ZFBitSet(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_UIUpdateFlag);
+    }
+}
+
+ZFMETHOD_DEFINE_0(P2World, zfbool, p2_UIOffsetChanged) {
+    return ZFBitTest(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_UIOffsetChanged);
+}
+ZFMETHOD_DEFINE_0(P2World, zfbool, p2_UIScaleChanged) {
+    return ZFBitTest(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_UIScaleChanged);
+}
+ZFMETHOD_DEFINE_0(P2World, zfbool, p2_UIVisibleAreaChanged) {
+    return ZFBitTest(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_UIVisibleAreaChanged);
 }
 
 ZFMETHOD_DEFINE_0(P2World, void, p2_start) {
@@ -2569,7 +2591,7 @@ void P2World::objectOnDeallocPrepare(void) {
                 }
                 body->_ZFP_P2Body_d->implBodyId = b2_nullBodyId;
                 body->_ZFP_P2Body_d->ownerUnit = zfnull;
-                body->_ZFP_P2Body_d->bodyRefJointList.clear();
+                body->_ZFP_P2Body_d->bodyRefJointList->removeAll();
             }
         };
 
@@ -2602,7 +2624,7 @@ void P2World::objectOnDeallocPrepare(void) {
                 CleanupJoint::a(unitJointList->get(iJoint));
             }
             unitJointList->removeAll();
-            unit->_ZFP_P2Unit_d->unitRefJointList.clear();
+            unit->_ZFP_P2Unit_d->unitRefJointList->removeAll();
             unit->_ZFP_P2Unit_d->ownerWorld = zfnull;
             unit->p2_body(zfnull);
         }
@@ -2655,8 +2677,8 @@ static void _ZFP_P2JointDetach(ZF_IN P2Joint *joint) {
                         );
             }
         }
-        joint->p2_ownerBody0()->_ZFP_P2Body_d->bodyRefJointList.erase(joint);
-        joint->p2_ownerBody1()->_ZFP_P2Body_d->bodyRefJointList.erase(joint);
+        joint->p2_ownerBody0()->_ZFP_P2Body_d->bodyRefJointList->removeElement(joint);
+        joint->p2_ownerBody1()->_ZFP_P2Body_d->bodyRefJointList->removeElement(joint);
         b2DestroyJoint(joint->_ZFP_P2Joint_d->implJointId);
     }
     if(ownerWorld) {
@@ -2686,19 +2708,19 @@ static void _ZFP_P2BodyDetach(ZF_IN P2Body *body, ZF_IN_OPT zfbool pendingBodyUp
         if(B2_IS_NON_NULL(body->_ZFP_P2Body_d->implBodyId)) {
             ownerWorld->p2impl->bodyRemove(ownerWorld, body);
 
-            zfimplhashmap<P2Joint *, zfbool> &bodyRefJointList = body->_ZFP_P2Body_d->bodyRefJointList;
-            for(zfimplhashmap<P2Joint *, zfbool>::iterator it = bodyRefJointList.begin(); it != bodyRefJointList.end(); ++it) {
-                P2Joint *joint = it->first;
+            ZFArray *bodyRefJointList = body->_ZFP_P2Body_d->bodyRefJointList;
+            for(zfindex i = bodyRefJointList->count() - 1; i != zfindexMax(); --i) {
+                P2Joint *joint = bodyRefJointList->get(i);
                 ownerWorld->_ZFP_P2World_d->pendingJoint.erase(joint);
 
                 P2Body *owenrBody2 = joint->p2_ownerBody0();
                 if(owenrBody2 == body) {
                     owenrBody2 = joint->p2_ownerBody1();
                 }
-                owenrBody2->_ZFP_P2Body_d->bodyRefJointList.erase(joint);
+                owenrBody2->_ZFP_P2Body_d->bodyRefJointList->removeElement(joint);
 
-                joint->p2_ownerBody0()->p2_ownerUnit()->_ZFP_P2Unit_d->unitRefJointList.erase(joint);
-                joint->p2_ownerBody1()->p2_ownerUnit()->_ZFP_P2Unit_d->unitRefJointList.erase(joint);
+                joint->p2_ownerBody0()->p2_ownerUnit()->_ZFP_P2Unit_d->unitRefJointList->removeElement(joint);
+                joint->p2_ownerBody1()->p2_ownerUnit()->_ZFP_P2Unit_d->unitRefJointList->removeElement(joint);
 
                 if(ZFBitTest(ownerWorld->_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2JointDetach)
                         || ZFBitTest(_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2JointDetach)
@@ -2900,14 +2922,14 @@ static void _ZFP_P2WorldImplStep_pendingJoint(ZF_IN P2World *world) {
         _ZFP_P2JointPrivate::jointCreate(ownerBody0, ownerBody1, joint);
 
         if(joint->_ZFP_P2Joint_d->jointOwner == world) {
-            ownerBody0->_ZFP_P2Body_d->bodyRefJointList[joint] = zftrue;
-            ownerBody1->_ZFP_P2Body_d->bodyRefJointList[joint] = zftrue;
-            ownerBody0->_ZFP_P2Body_d->ownerUnit->_ZFP_P2Unit_d->unitRefJointList[joint] = zftrue;
-            ownerBody1->_ZFP_P2Body_d->ownerUnit->_ZFP_P2Unit_d->unitRefJointList[joint] = zftrue;
+            ownerBody0->_ZFP_P2Body_d->bodyRefJointList->add(joint);
+            ownerBody1->_ZFP_P2Body_d->bodyRefJointList->add(joint);
+            ownerBody0->_ZFP_P2Body_d->ownerUnit->_ZFP_P2Unit_d->unitRefJointList->add(joint);
+            ownerBody1->_ZFP_P2Body_d->ownerUnit->_ZFP_P2Unit_d->unitRefJointList->add(joint);
         }
         else {
-            ownerBody0->_ZFP_P2Body_d->bodyRefJointList[joint] = zftrue;
-            ownerBody1->_ZFP_P2Body_d->bodyRefJointList[joint] = zftrue;
+            ownerBody0->_ZFP_P2Body_d->bodyRefJointList->add(joint);
+            ownerBody1->_ZFP_P2Body_d->bodyRefJointList->add(joint);
         }
 
         if(ZFBitTest(world->_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2JointAttach)
@@ -3214,6 +3236,12 @@ static void _ZFP_P2WorldImplStep(ZF_IN P2World *world) {
     if(ZFBitTest(world->_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_UIUpdateFlag)) {
         ZFBitUnset(world->_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_UIUpdateFlag);
         world->p2impl->UIUpdate(world);
+        if(ZFBitTest(world->_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2UIUpdate)
+                || ZFBitTest(_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2UIUpdate)
+                ) {
+            world->observerNotify(P2World::E_P2UIUpdate());
+        }
+        ZFBitUnset(world->_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_UIChangedMask);
     }
     if(ZFBitTest(world->_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2StepPost)
             || ZFBitTest(_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2StepPost)

@@ -541,12 +541,12 @@ public:
     /**
      * @brief see #P2World
      *
-     * get a copy of all joints that referenced this body,
+     * all joints that referenced this body,
      * including joints in #P2Unit::p2_jointList and #P2World::p2_jointList
      * must not manually modify,
      * valid only after added to world and first time updated
      */
-    ZFMETHOD_DECLARE_0(zfautoT<ZFContainer>, p2_refJointList)
+    ZFMETHOD_DECLARE_0(ZFArray *, p2_refJointList)
 
 public:
     /** @brief see #P2World, must be unique within same #P2World */
@@ -841,12 +841,12 @@ public:
     /**
      * @brief see #P2World
      *
-     * get a copy of all joints in owner world that referenced this unit's body or parts,
+     * all joints in owner world that referenced this unit's body or parts,
      * not including the #p2_jointList inside this unit,
      * must not manually modify,
      * valid only after added to world and first time updated
      */
-    ZFMETHOD_DECLARE_0(zfautoT<ZFContainer>, p2_refJointList)
+    ZFMETHOD_DECLARE_0(ZFArray *, p2_refJointList)
 
     /** @brief see #P2World::p2_UIVisibleArea */
     ZFMETHOD_DECLARE_0(zfbool, p2_unitVisible)
@@ -1082,6 +1082,13 @@ public:
      */
     ZFEVENT(P2ContactEvent)
 
+    /**
+     * @brief see #ZFObject::observerNotify
+     *
+     * called when #p2_UIOffset or #p2_UIScale changed, or #p2_UIUpdateRequest called
+     */
+    ZFEVENT(P2UIUpdate)
+
 public:
     /** @brief see #P2World */
     ZFPROPERTY_ASSIGN(ZFUIPoint, p2_gravity, ZFUIPointCreate(0, -10))
@@ -1111,6 +1118,19 @@ public:
     ZFMETHOD_DECLARE_1(void, p2_UIVisibleArea
             , ZFMP_IN(const ZFUIRect &, v)
             )
+
+    /**
+     * @brief whether #p2_UIOffset has changed, reset after each #E_P2UIUpdate event
+     */
+    ZFMETHOD_DECLARE_0(zfbool, p2_UIOffsetChanged)
+    /**
+     * @brief whether #p2_UIScale has changed, reset after each #E_P2UIUpdate event
+     */
+    ZFMETHOD_DECLARE_0(zfbool, p2_UIScaleChanged)
+    /**
+     * @brief whether #p2_UIVisibleArea has changed, reset after each #E_P2UIUpdate event
+     */
+    ZFMETHOD_DECLARE_0(zfbool, p2_UIVisibleAreaChanged)
 
     /** @brief see #P2World */
     ZFMETHOD_DECLARE_0(void, p2_start)
