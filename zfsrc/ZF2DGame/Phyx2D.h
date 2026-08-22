@@ -958,7 +958,7 @@ public:
     /** @brief called to update body position */
     virtual void bodyMoveEvent(ZF_IN P2World *world, ZF_IN P2BodyMoveEvent *event) zfpurevirtual;
     /**
-     * @brief called when #P2World::p2_UIOffset or #P2World::p2_UIScale changed,
+     * @brief called when #P2World::p2_UIOffset or #P2World::p2_UISize or #P2World::p2_UIScale changed,
      *   called only once after current simulation step
      */
     virtual void UIUpdate(ZF_IN P2World *world) zfpurevirtual;
@@ -1085,7 +1085,7 @@ public:
     /**
      * @brief see #ZFObject::observerNotify
      *
-     * called when #p2_UIOffset or #p2_UIScale changed, or #p2_UIUpdateRequest called
+     * called when #p2_UIOffset or #p2_UISize or #p2_UIScale changed, or #p2_UIUpdateRequest called
      */
     ZFEVENT(P2UIUpdate)
 
@@ -1098,31 +1098,35 @@ public:
     /** @brief see #P2World, positive value means item moves to right top, in P2's size unit */
     ZFPROPERTY_ASSIGN(ZFUIPoint, p2_UIOffset)
     ZFPROPERTY_ON_UPDATE_DECLARE(ZFUIPoint, p2_UIOffset)
+    /** @brief see #P2World, in P2's size unit */
+    ZFPROPERTY_ASSIGN(ZFUISize, p2_UISize)
+    ZFPROPERTY_ON_UPDATE_DECLARE(ZFUISize, p2_UISize)
     /** @brief see #P2World, `scale = UI_size_unit / P2_size_unit` */
     ZFPROPERTY_ASSIGN(zffloat, p2_UIScale, 50)
     ZFPROPERTY_ON_UPDATE_DECLARE(zffloat, p2_UIScale)
     /**
      * @brief explicitly request update UI
      *
-     * #P2WorldImpl::UIUpdate would only get called if #p2_UIOffset or #p2_UIScale really changed,
+     * #P2WorldImpl::UIUpdate would only get called if #p2_UIOffset or #p2_UISize or #p2_UIScale really changed,
      * you may use this method to explicitly request update UI,
      * typically because of renderer size changed
      */
     ZFMETHOD_DECLARE_0(void, p2_UIUpdateRequest)
 
-    /** @brief see #P2World, extra margin to calculate proper #p2_UIVisibleArea */
+    /** @brief see #P2World, extra margin to calculate proper #p2_UIVisibleArea, in P2's size unit */
     ZFPROPERTY_ASSIGN(ZFUIMargin, p2_UIVisibleAreaMargin, ZFUIMarginCreate(-1))
-    /** @brief see #P2World, visible area according to #p2_UIOffset */
+    ZFPROPERTY_ON_UPDATE_DECLARE(ZFUIMargin, p2_UIVisibleAreaMargin)
+    /** @brief see #P2World, visible area according to #p2_UIOffset and #p2_UISize */
     ZFMETHOD_DECLARE_0(const ZFUIRect &, p2_UIVisibleArea)
-    /** @brief see #P2World, visible area according to #p2_UIOffset, should be updated by #p2impl */
-    ZFMETHOD_DECLARE_1(void, p2_UIVisibleArea
-            , ZFMP_IN(const ZFUIRect &, v)
-            )
 
     /**
      * @brief whether #p2_UIOffset has changed, reset after each #E_P2UIUpdate event
      */
     ZFMETHOD_DECLARE_0(zfbool, p2_UIOffsetChanged)
+    /**
+     * @brief whether #p2_UISize has changed, reset after each #E_P2UIUpdate event
+     */
+    ZFMETHOD_DECLARE_0(zfbool, p2_UISizeChanged)
     /**
      * @brief whether #p2_UIScale has changed, reset after each #E_P2UIUpdate event
      */

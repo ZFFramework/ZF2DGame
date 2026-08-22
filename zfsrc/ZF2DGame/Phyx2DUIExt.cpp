@@ -57,10 +57,6 @@ public:
     }
     zfoverride
     virtual void UIUpdate(ZF_IN P2World *world) {
-        if(this->UIScalePrev != world->p2_UIScale()) {
-            this->UIScalePrev = world->p2_UIScale();
-            this->visibleAreaUpdate(worldView->viewFrame());
-        }
         ZFCoreArray<zfautoT<ZFUIView> > childList = container->childArray();
         for(zfindex i = childList.count() - 1; i != zfindexMax(); --i) {
             ZFUIView *bodyView = childList[i];
@@ -107,19 +103,6 @@ public:
                     ZFCoreCriticalShouldNotGoHere();
                     break;
             }
-        }
-    }
-public:
-    void visibleAreaUpdate(ZF_IN const ZFUIRect &rect) {
-        if(world) {
-            world->p2_UIVisibleArea(ZFUIRectApplyMargin(ZFUIRectCreate(
-                            0
-                            , 0
-                            , rect.width / world->p2_UIScale()
-                            , rect.height / world->p2_UIScale()
-                            )
-                        , world->p2_UIVisibleAreaMargin()
-                        ));
         }
     }
 private:
@@ -236,16 +219,8 @@ void P2WorldView::objectOnDeallocPrepare(void) {
 
 void P2WorldView::layoutOnLayout(ZF_IN const ZFUIRect &bounds) {
     zfsuper::layoutOnLayout(bounds);
-    {
-        const ZFUIRect &viewFrame = this->viewFrame();
-        const ZFUIRect &viewFramePrev = this->viewFramePrev();
-        if(viewFrame.width != viewFramePrev.width
-                || viewFrame.height != viewFramePrev.height
-                ) {
-            d->world->p2_UIUpdateRequest();
-        }
-    }
-    d->visibleAreaUpdate(bounds);
+    const ZFUIRect &viewFrame = this->viewFrame();
+    d->world->p2_UISize(ZFUISizeCreate(viewFrame.width, viewFrame.height));
 }
 
 // ============================================================

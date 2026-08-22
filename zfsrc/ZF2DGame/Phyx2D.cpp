@@ -319,26 +319,28 @@ public:
         stateFlag_stepRunning = 1 << 0,
         stateFlag_UIUpdateFlag = 1 << 1,
         stateFlag_UIOffsetChanged = 1 << 2,
-        stateFlag_UIScaleChanged = 1 << 3,
-        stateFlag_UIVisibleAreaChanged = 1 << 4,
+        stateFlag_UISizeChanged = 1 << 3,
+        stateFlag_UIScaleChanged = 1 << 4,
+        stateFlag_UIVisibleAreaChanged = 1 << 5,
         stateFlag_UIChangedMask = 0
             | stateFlag_UIOffsetChanged
+            | stateFlag_UISizeChanged
             | stateFlag_UIScaleChanged
             | stateFlag_UIVisibleAreaChanged
             ,
-        stateFlag_E_P2UnitAttach = 1 << 5,
-        stateFlag_E_P2UnitDetach = 1 << 6,
-        stateFlag_E_P2BodyAttach = 1 << 7,
-        stateFlag_E_P2BodyDetach = 1 << 8,
-        stateFlag_E_P2JointAttach = 1 << 9,
-        stateFlag_E_P2JointDetach = 1 << 10,
-        stateFlag_E_P2StepPrev = 1 << 11,
-        stateFlag_E_P2StepPost = 1 << 12,
-        stateFlag_E_P2UnitVisibilityEvent = 1 << 13,
-        stateFlag_E_P2BodyMoveEvent = 1 << 14,
-        stateFlag_E_P2SensorEvent = 1 << 15,
-        stateFlag_E_P2ContactEvent = 1 << 16,
-        stateFlag_E_P2UIUpdate = 1 << 17,
+        stateFlag_E_P2UnitAttach = 1 << 6,
+        stateFlag_E_P2UnitDetach = 1 << 7,
+        stateFlag_E_P2BodyAttach = 1 << 8,
+        stateFlag_E_P2BodyDetach = 1 << 9,
+        stateFlag_E_P2JointAttach = 1 << 10,
+        stateFlag_E_P2JointDetach = 1 << 11,
+        stateFlag_E_P2StepPrev = 1 << 12,
+        stateFlag_E_P2StepPost = 1 << 13,
+        stateFlag_E_P2UnitVisibilityEvent = 1 << 14,
+        stateFlag_E_P2BodyMoveEvent = 1 << 15,
+        stateFlag_E_P2SensorEvent = 1 << 16,
+        stateFlag_E_P2ContactEvent = 1 << 17,
+        stateFlag_E_P2UIUpdate = 1 << 18,
     };
     zfuint stateFlag;
 
@@ -2222,6 +2224,12 @@ ZFPROPERTY_ON_UPDATE_DEFINE(P2World, ZFUIPoint, p2_UIOffset) {
         ZFBitSet(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_UIUpdateFlag);
     }
 }
+ZFPROPERTY_ON_UPDATE_DEFINE(P2World, ZFUISize, p2_UISize) {
+    if(propertyValue != propertyValueOld) {
+        ZFBitSet(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_UISizeChanged);
+        ZFBitSet(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_UIUpdateFlag);
+    }
+}
 ZFPROPERTY_ON_UPDATE_DEFINE(P2World, zffloat, p2_UIScale) {
     if(propertyValue <= 0) {
         propertyValue = 1;
@@ -2235,27 +2243,27 @@ ZFMETHOD_DEFINE_0(P2World, void, p2_UIUpdateRequest) {
     ZFBitSet(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_UIUpdateFlag);
 }
 
-ZFMETHOD_DEFINE_0(P2World, const ZFUIRect &, p2_UIVisibleArea) {
-    return _ZFP_P2World_d->visibleArea;
-}
-ZFMETHOD_DEFINE_1(P2World, void, p2_UIVisibleArea
-        , ZFMP_IN(const ZFUIRect &, v)
-        ) {
-    if(_ZFP_P2World_d->visibleArea != v) {
-        _ZFP_P2World_d->visibleArea = v;
+ZFPROPERTY_ON_UPDATE_DEFINE(P2World, ZFUIMargin, p2_UIVisibleAreaMargin) {
+    if(propertyValue != propertyValueOld) {
         ZFBitSet(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_UIVisibleAreaChanged);
         ZFBitSet(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_UIUpdateFlag);
     }
+}
+ZFMETHOD_DEFINE_0(P2World, const ZFUIRect &, p2_UIVisibleArea) {
+    return _ZFP_P2World_d->visibleArea;
 }
 
 ZFMETHOD_DEFINE_0(P2World, zfbool, p2_UIOffsetChanged) {
     return ZFBitTest(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_UIOffsetChanged);
 }
+ZFMETHOD_DEFINE_0(P2World, zfbool, p2_UISizeChanged) {
+    return ZFBitTest(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_UISizeChanged);
+}
 ZFMETHOD_DEFINE_0(P2World, zfbool, p2_UIScaleChanged) {
     return ZFBitTest(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_UIScaleChanged);
 }
 ZFMETHOD_DEFINE_0(P2World, zfbool, p2_UIVisibleAreaChanged) {
-    return ZFBitTest(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_UIVisibleAreaChanged);
+    return ZFBitTest(_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_UIChangedMask);
 }
 
 ZFMETHOD_DEFINE_0(P2World, void, p2_start) {
@@ -3235,6 +3243,16 @@ static void _ZFP_P2WorldImplStep(ZF_IN P2World *world) {
 
     if(ZFBitTest(world->_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_UIUpdateFlag)) {
         ZFBitUnset(world->_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_UIUpdateFlag);
+        if(ZFBitTest(world->_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_UIChangedMask)) {
+            world->_ZFP_P2World_d->visibleArea = ZFUIRectApplyMargin(ZFUIRectCreate(
+                        0
+                        , 0
+                        , world->p2_UISize().width
+                        , world->p2_UISize().height
+                        )
+                    , world->p2_UIVisibleAreaMargin()
+                    );
+        }
         world->p2impl->UIUpdate(world);
         if(ZFBitTest(world->_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2UIUpdate)
                 || ZFBitTest(_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2UIUpdate)
