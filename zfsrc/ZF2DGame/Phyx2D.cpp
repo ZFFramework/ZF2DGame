@@ -1124,11 +1124,28 @@ ZFMETHOD_DEFINE_0(P2JointRevolute, zffloat, p2_angularCur) {
         return this->p2_angular();
     }
 }
+static void _ZFP_P2JointRevolute_updateLimits(
+        ZF_OUT float &lowerAngle
+        , ZF_OUT float &upperAngle
+        , ZF_IN zffloat angularLimitMin
+        , ZF_IN zffloat angularLimitMax
+        ) {
+    if(angularLimitMin <= angularLimitMax) {
+        lowerAngle = (0 - angularLimitMax) * B2_PI / 180;
+        upperAngle = (0 - angularLimitMin) * B2_PI / 180;
+    }
+    else {
+        lowerAngle = (0 - angularLimitMin) * B2_PI / 180;
+        upperAngle = (0 - angularLimitMax) * B2_PI / 180;
+    }
+}
 ZFPROPERTY_ON_UPDATE_DEFINE(P2JointRevolute, zffloat, p2_angularLimitMin) {
     if(B2_IS_NON_NULL(_ZFP_P2Joint_d->implJointId)) {
         if(this->p2_angularLimitMin() < this->p2_angularLimitMax()) {
             b2RevoluteJoint_EnableLimit(_ZFP_P2Joint_d->implJointId, zftrue);
-            b2RevoluteJoint_SetLimits(_ZFP_P2Joint_d->implJointId, b2RadFromZF(this->p2_angularLimitMax()), b2RadFromZF(this->p2_angularLimitMin()));
+            float lowerAngle, upperAngle;
+            _ZFP_P2JointRevolute_updateLimits(lowerAngle, upperAngle, this->p2_angularLimitMin(), this->p2_angularLimitMax());
+            b2RevoluteJoint_SetLimits(_ZFP_P2Joint_d->implJointId, lowerAngle, upperAngle);
         }
         else {
             b2RevoluteJoint_EnableLimit(_ZFP_P2Joint_d->implJointId, zffalse);
@@ -1139,7 +1156,9 @@ ZFPROPERTY_ON_UPDATE_DEFINE(P2JointRevolute, zffloat, p2_angularLimitMax) {
     if(B2_IS_NON_NULL(_ZFP_P2Joint_d->implJointId)) {
         if(this->p2_angularLimitMin() < this->p2_angularLimitMax()) {
             b2RevoluteJoint_EnableLimit(_ZFP_P2Joint_d->implJointId, zftrue);
-            b2RevoluteJoint_SetLimits(_ZFP_P2Joint_d->implJointId, b2RadFromZF(this->p2_angularLimitMax()), b2RadFromZF(this->p2_angularLimitMin()));
+            float lowerAngle, upperAngle;
+            _ZFP_P2JointRevolute_updateLimits(lowerAngle, upperAngle, this->p2_angularLimitMin(), this->p2_angularLimitMax());
+            b2RevoluteJoint_SetLimits(_ZFP_P2Joint_d->implJointId, lowerAngle, upperAngle);
         }
         else {
             b2RevoluteJoint_EnableLimit(_ZFP_P2Joint_d->implJointId, zffalse);
@@ -1174,12 +1193,11 @@ void P2JointRevolute::p2impl_jointCreate(ZF_IN P2Body *ownerBody0, ZF_IN P2Body 
         implJointDef.enableMotor = zffalse;
     }
 
-    implJointDef.referenceAngle = b2RadFromZF(this->p2_angularRef());
+    implJointDef.referenceAngle = b2RadFromZF(ownerBody1->p2_rotation() - ownerBody0->p2_rotation() + this->p2_angularRef());
     implJointDef.targetAngle = b2RadFromZF(this->p2_angular());
     if(this->p2_angularLimitMin() < this->p2_angularLimitMax()) {
         implJointDef.enableLimit = zftrue;
-        implJointDef.lowerAngle = b2RadFromZF(this->p2_angularLimitMax());
-        implJointDef.upperAngle = b2RadFromZF(this->p2_angularLimitMin());
+        _ZFP_P2JointRevolute_updateLimits(implJointDef.lowerAngle, implJointDef.upperAngle, this->p2_angularLimitMin(), this->p2_angularLimitMax());
     }
     else {
         implJointDef.enableLimit = zffalse;
@@ -1301,7 +1319,7 @@ void P2JointPrismatic::p2impl_jointCreate(ZF_IN P2Body *ownerBody0, ZF_IN P2Body
     }
 
     implJointDef.localAxisA = b2Vec2FromZF(this->p2_axis());
-    implJointDef.referenceAngle = b2RadFromZF(this->p2_angularRef());
+    implJointDef.referenceAngle = b2RadFromZF(ownerBody1->p2_rotation() - ownerBody0->p2_rotation() + this->p2_angularRef());
     implJointDef.targetTranslation = this->p2_distance();
     if(this->p2_distanceLimitMin() < this->p2_distanceLimitMax()) {
         implJointDef.enableLimit = zftrue;
@@ -1538,10 +1556,9 @@ void P2JointWeld::p2impl_jointCreate(ZF_IN P2Body *ownerBody0, ZF_IN P2Body *own
     implJointDef.bodyIdA = ownerBody0->_ZFP_P2Body_d->implBodyId;
     implJointDef.bodyIdB = ownerBody1->_ZFP_P2Body_d->implBodyId;
     implJointDef.collideConnected = this->p2_contactEnable();
-
     implJointDef.localAnchorA = b2Vec2FromZF(this->p2_anchor0());
     implJointDef.localAnchorB = b2Vec2FromZF(this->p2_anchor1());
-    implJointDef.referenceAngle = b2RadFromZF(this->p2_angularRef());
+    implJointDef.referenceAngle = b2RadFromZF(ownerBody1->p2_rotation() - ownerBody0->p2_rotation() + this->p2_angularRef());
     implJointDef.linearHertz = this->p2_distanceHertz();
     implJointDef.linearDampingRatio = this->p2_distanceDamping();
     implJointDef.angularHertz = this->p2_angularHertz();

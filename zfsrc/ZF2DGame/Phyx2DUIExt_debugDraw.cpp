@@ -140,7 +140,7 @@ public:
                 v->internalFgView(sv);
             }
             ZFUIPoint centerOfMass = body->p2_centerOfMass();
-            zffloat size = 8;
+            zffloat size = 4;
             v->massCenterDebug->viewFrame(ZFUIRectCreate(
                         (centerOfMass.x - bodyAABB.x) * s - size / 2
                         , (bodyAABB.y + bodyAABB.height - centerOfMass.y) * s - size / 2
@@ -175,19 +175,18 @@ public:
             d->internalFgView(v)->sizeFill();
             v->bgColor(ZFUIColorRandom(0.4f));
         }
-        ZFUIPoint pos0 = joint->p2_ownerBody0()->p2_positionCur();
-        ZFUIPoint pos1 = joint->p2_ownerBody1()->p2_positionCur();
+        ZFUIPoint pos0 = ZFUIPointDec(joint->p2_ownerBody0()->p2_positionCur(), joint->p2_ownerBody0()->p2_centerOfMass());
+        ZFUIPoint pos1 = ZFUIPointDec(joint->p2_ownerBody1()->p2_positionCur(), joint->p2_ownerBody1()->p2_centerOfMass());
         zffloat w = (zffloat)sqrt(pow(pos1.x - pos0.x, 2) + pow(pos1.y - pos0.y, 2));
-        zffloat h = 3;
+        zffloat h = 2 / world->p2_UIScale();
         zffloat x = (pos0.x + pos1.x) / 2;
         zffloat y = (pos0.y + pos1.y) / 2;
-        zffloat s = world->p2_UIScale();
-        v->viewFrame(ZFUIRectCreate(
-                    (x - w / 2) * s
-                    , (y - h / 2) * s
-                    , w
-                    , h
-                    ));
+        v->viewFrame(P2AABBToRect(world, ZFUIRectCreate(
+                        x - w / 2
+                        , y - h / 2
+                        , w
+                        , h
+                        )));
         v->rotateZ(360 - atan2(pos1.y - pos0.y, pos1.x - pos0.x) * 180 / B2_PI);
     }
     void jointDebugDetach(ZF_IN P2Joint *joint) {
