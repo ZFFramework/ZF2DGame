@@ -482,6 +482,20 @@ protected:
     virtual void p2impl_jointCreate(ZF_IN P2Body *ownerBody0, ZF_IN P2Body *ownerBody1);
 };
 
+/** @brief see #P2World */
+zfclass ZFLIB_ZF2DGame P2JointMouse : zfextend P2Joint {
+    ZFOBJECT_DECLARE(P2JointMouse, P2Joint)
+
+public:
+    /** @brief see #P2World, mouse position relative to world */
+    ZFPROPERTY_ASSIGN(ZFUIPoint, p2_position)
+    ZFPROPERTY_ON_UPDATE_DECLARE(ZFUIPoint, p2_position)
+
+protected:
+    zfoverride
+    virtual void p2impl_jointCreate(ZF_IN P2Body *ownerBody0, ZF_IN P2Body *ownerBody1);
+};
+
 // ============================================================
 /** @brief see #P2World */
 ZFENUM_BEGIN(ZFLIB_ZF2DGame, P2BodyType)

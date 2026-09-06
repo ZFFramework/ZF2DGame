@@ -1583,6 +1583,26 @@ void P2JointFilter::p2impl_jointCreate(ZF_IN P2Body *ownerBody0, ZF_IN P2Body *o
             );
 }
 
+ZFOBJECT_REGISTER(P2JointMouse)
+ZFPROPERTY_ON_UPDATE_DEFINE(P2JointMouse, ZFUIPoint, p2_position) {
+    if(B2_IS_NON_NULL(_ZFP_P2Joint_d->implJointId)) {
+        b2MouseJoint_SetTarget(_ZFP_P2Joint_d->implJointId, b2Vec2FromZF(propertyValue));
+    }
+}
+void P2JointMouse::p2impl_jointCreate(ZF_IN P2Body *ownerBody0, ZF_IN P2Body *ownerBody1) {
+    zfsuper::p2impl_jointCreate(ownerBody0, ownerBody1);
+    _ZFP_P2Joint_implJointDef(this, ownerBody0, ownerBody1);
+
+    b2MouseJointDef implJointDef = b2DefaultMouseJointDef();
+    implJointDef.bodyIdA = ownerBody0->_ZFP_P2Body_d->implBodyId;
+    implJointDef.bodyIdB = ownerBody1->_ZFP_P2Body_d->implBodyId;
+    implJointDef.target = b2Vec2FromZF(this->p2_position());
+    _ZFP_P2Joint_d->implJointId = b2CreateMouseJoint(
+            b2Body_GetWorld(ownerBody0->_ZFP_P2Body_d->implBodyId)
+            , &implJointDef
+            );
+}
+
 // ============================================================
 ZFENUM_DEFINE(P2BodyType)
 
