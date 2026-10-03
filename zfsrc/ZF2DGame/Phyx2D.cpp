@@ -5,6 +5,9 @@
 
 ZF_NAMESPACE_GLOBAL_BEGIN
 
+ZFMETHOD_FUNC_USER_REGISTER_FOR_FUNC_0(zffloat, P2_PI)
+ZFMETHOD_FUNC_USER_REGISTER_FOR_FUNC_0(zffloat, P2_MAX)
+
 ZF_STATIC_REGISTER_INIT(P2EnvSetup) {
     b2SetAssertFcn(b2fn_assert);
 }
@@ -21,10 +24,6 @@ private:
 ZF_STATIC_REGISTER_END(P2EnvSetup)
 
 // ============================================================
-static zffloat b2DistanceLarge(void) {
-    return 1000000 * b2GetLengthUnitsPerMeter();
-}
-
 static ZFUIPoint b2Vec2ToZF(ZF_IN const b2Vec2 &v) {
     return ZFUIPointCreate(v.x, v.y);
 }
@@ -35,10 +34,10 @@ static b2Vec2 b2Vec2FromZF(ZF_IN const ZFUIPoint &v) {
     return ret;
 }
 static zffloat b2RadianNormalize(ZF_IN zffloat v) {
-    if(v < 0 || v >= B2_PI * 2) {
-        v = fmodf(fmodf(v, B2_PI * 2) + B2_PI * 2, B2_PI * 2);
+    if(v < 0 || v >= P2_PI() * 2) {
+        v = fmodf(fmodf(v, P2_PI() * 2) + P2_PI() * 2, P2_PI() * 2);
     }
-    if(zfmAbs(v) <= B2_PI / 180 / 5) {
+    if(zfmAbs(v) <= P2_PI() / 180 / 5) {
         return 0;
     }
     else {
@@ -57,22 +56,22 @@ static zffloat b2DegreeNormalize(ZF_IN zffloat v) {
     }
 }
 static zffloat b2RotToZF(ZF_IN const b2Rot &v) {
-    return b2DegreeNormalize(360.0f - (atan2(v.s, v.c) * 180 / B2_PI));
+    return b2DegreeNormalize(0.0f - (atan2(v.s, v.c) * 180 / P2_PI()));
 }
 static b2Rot b2RotFromZF(ZF_IN zffloat v) {
-    return b2MakeRot(b2RadianNormalize((360.0f - v) * B2_PI / 180));
+    return b2MakeRot(b2RadianNormalize((0.0f - v) * P2_PI() / 180));
 }
 static zffloat b2RadToZF(ZF_IN float v) {
-    return b2DegreeNormalize(360.0f - (v * 180 / B2_PI));
+    return 0.0f - (v * 180 / P2_PI());
 }
 static float b2RadFromZF(ZF_IN zffloat v) {
-    return b2RadianNormalize((360.0f - v) * B2_PI / 180);
+    return (0.0f - v) * P2_PI() / 180;
 }
 static zffloat b2AngularVelocityToZF(ZF_IN float v) {
-    return 0.0f - (v * 180 / B2_PI);
+    return 0.0f - (v * 180 / P2_PI());
 }
 static float b2AngularVelocityFromZF(ZF_IN zffloat v) {
-    return 0.0f - v * B2_PI / 180;
+    return 0.0f - v * P2_PI() / 180;
 }
 static b2Transform b2TransformFromZF(ZF_IN const ZFUIPoint &position, ZF_IN zffloat rotation) {
     b2Transform ret;
@@ -134,10 +133,14 @@ zfclassNotPOD _ZFP_P2JointPrivate {
 public:
     b2JointId implJointId;
     ZFObject *jointOwner; // P2Unit or P2World, according to who added this joint
+    zfweakT<P2Body> body0;
+    zfweakT<P2Body> body1;
 public:
     _ZFP_P2JointPrivate(void)
     : implJointId(b2_nullJointId)
     , jointOwner(zfnull)
+    , body0()
+    , body1()
     {
     }
 public:
@@ -875,6 +878,37 @@ ZFMETHOD_DEFINE_0(P2Joint, P2World *, p2_ownerWorld) {
         return zfnull;
     }
 }
+ZFMETHOD_DEFINE_0(P2Joint, ZFObject *, p2_owner) {
+    return _ZFP_P2Joint_d->jointOwner;
+}
+
+ZFMETHOD_DEFINE_0(P2Joint, void, p2_removeFromParent) {
+    if(_ZFP_P2Joint_d->jointOwner) {
+        if(_ZFP_P2Joint_d->jointOwner->classData()->classIsTypeOf(P2Unit::ClassData())) {
+            zfcast(P2Unit *, _ZFP_P2Joint_d->jointOwner)->p2_jointRemove(this);
+        }
+        else {
+            zfcast(P2World *, _ZFP_P2Joint_d->jointOwner)->p2_jointRemove(this);
+        }
+    }
+}
+
+ZFMETHOD_DEFINE_1(P2Joint, void, p2_body0
+        , ZFMP_IN(P2Body *, v)
+        ) {
+    _ZFP_P2Joint_d->body0 = v;
+}
+ZFMETHOD_DEFINE_0(P2Joint, P2Body *, p2_body0) {
+    return _ZFP_P2Joint_d->body0;
+}
+ZFMETHOD_DEFINE_1(P2Joint, void, p2_body1
+        , ZFMP_IN(P2Body *, v)
+        ) {
+    _ZFP_P2Joint_d->body1 = v;
+}
+ZFMETHOD_DEFINE_0(P2Joint, P2Body *, p2_body1) {
+    return _ZFP_P2Joint_d->body1;
+}
 
 ZFPROPERTY_ON_UPDATE_DEFINE(P2Joint, zfbool, p2_contactEnable) {
     if(B2_IS_NON_NULL(_ZFP_P2Joint_d->implJointId)) {
@@ -987,12 +1021,20 @@ ZFMETHOD_DEFINE_0(P2JointDistance, zffloat, p2_distanceCur) {
 }
 ZFPROPERTY_ON_UPDATE_DEFINE(P2JointDistance, zffloat, p2_distanceLimitMin) {
     if(B2_IS_NON_NULL(_ZFP_P2Joint_d->implJointId)) {
-        if(this->p2_distanceLimitMin() < 0 || this->p2_distanceLimitMax() > 0) {
+        if(this->p2_distanceLimitMin() != -P2_MAX() || this->p2_distanceLimitMax() != P2_MAX()) {
             b2DistanceJoint_EnableLimit(_ZFP_P2Joint_d->implJointId, zftrue);
-            b2DistanceJoint_SetLengthRange(_ZFP_P2Joint_d->implJointId
-                    , this->p2_distanceLimitMin() < 0 ? (float)(this->p2_distance() + this->p2_distanceLimitMin()) : (float)0
-                    , this->p2_distanceLimitMax() > 0 ? (float)(this->p2_distance() + this->p2_distanceLimitMax()) : (float)b2DistanceLarge()
-                    );
+            if(this->p2_distanceLimitMin() >= 0) {
+                b2DistanceJoint_SetLengthRange(_ZFP_P2Joint_d->implJointId
+                        , (float)this->p2_distanceLimitMin()
+                        , this->p2_distanceLimitMax() >= this->p2_distanceLimitMin() ? (float)this->p2_distanceLimitMax() : (float)this->p2_distanceLimitMin()
+                        );
+            }
+            else {
+                b2DistanceJoint_SetLengthRange(_ZFP_P2Joint_d->implJointId
+                        , (float)0
+                        , this->p2_distanceLimitMax() >= 0 ? (float)this->p2_distanceLimitMax() : (float)0
+                        );
+            }
         }
         else {
             b2DistanceJoint_EnableLimit(_ZFP_P2Joint_d->implJointId, zffalse);
@@ -1001,12 +1043,20 @@ ZFPROPERTY_ON_UPDATE_DEFINE(P2JointDistance, zffloat, p2_distanceLimitMin) {
 }
 ZFPROPERTY_ON_UPDATE_DEFINE(P2JointDistance, zffloat, p2_distanceLimitMax) {
     if(B2_IS_NON_NULL(_ZFP_P2Joint_d->implJointId)) {
-        if(this->p2_distanceLimitMin() < 0 || this->p2_distanceLimitMax() > 0) {
+        if(this->p2_distanceLimitMin() != -P2_MAX() || this->p2_distanceLimitMax() != P2_MAX()) {
             b2DistanceJoint_EnableLimit(_ZFP_P2Joint_d->implJointId, zftrue);
-            b2DistanceJoint_SetLengthRange(_ZFP_P2Joint_d->implJointId
-                    , this->p2_distanceLimitMin() < 0 ? (float)(this->p2_distance() + this->p2_distanceLimitMin()) : (float)0
-                    , this->p2_distanceLimitMax() > 0 ? (float)(this->p2_distance() + this->p2_distanceLimitMax()) : (float)b2DistanceLarge()
-                    );
+            if(this->p2_distanceLimitMin() >= 0) {
+                b2DistanceJoint_SetLengthRange(_ZFP_P2Joint_d->implJointId
+                        , (float)this->p2_distanceLimitMin()
+                        , this->p2_distanceLimitMax() >= this->p2_distanceLimitMin() ? (float)this->p2_distanceLimitMax() : (float)this->p2_distanceLimitMin()
+                        );
+            }
+            else {
+                b2DistanceJoint_SetLengthRange(_ZFP_P2Joint_d->implJointId
+                        , (float)0
+                        , this->p2_distanceLimitMax() >= 0 ? (float)this->p2_distanceLimitMax() : (float)0
+                        );
+            }
         }
         else {
             b2DistanceJoint_EnableLimit(_ZFP_P2Joint_d->implJointId, zffalse);
@@ -1042,22 +1092,15 @@ void P2JointDistance::p2impl_jointCreate(ZF_IN P2Body *ownerBody0, ZF_IN P2Body 
     }
 
     implJointDef.length = this->p2_distance();
-    if(this->p2_distanceLimitMin() < 0 || this->p2_distanceLimitMax() > 0) {
+    if(this->p2_distanceLimitMin() != -P2_MAX() || this->p2_distanceLimitMax() != P2_MAX()) {
         implJointDef.enableLimit = zftrue;
-        if(this->p2_distanceLimitMin() < 0) {
-            implJointDef.minLength = this->p2_distance() + this->p2_distanceLimitMin();
-            if(implJointDef.minLength < 0) {
-                implJointDef.minLength = 0;
-            }
+        if(this->p2_distanceLimitMin() >= 0) {
+            implJointDef.minLength = (float)this->p2_distanceLimitMin();
+            implJointDef.maxLength = this->p2_distanceLimitMax() >= this->p2_distanceLimitMin() ? (float)this->p2_distanceLimitMax() : (float)this->p2_distanceLimitMin();
         }
         else {
-            implJointDef.minLength = 0;
-        }
-        if(this->p2_distanceLimitMax() > 0) {
-            implJointDef.maxLength = this->p2_distance() + this->p2_distanceLimitMax();
-        }
-        else {
-            implJointDef.maxLength = b2DistanceLarge();
+            implJointDef.minLength = (float)0;
+            implJointDef.maxLength = this->p2_distanceLimitMax() >= 0 ? (float)this->p2_distanceLimitMax() : (float)0;
         }
     }
     else {
@@ -1124,28 +1167,22 @@ ZFMETHOD_DEFINE_0(P2JointRevolute, zffloat, p2_angularCur) {
         return this->p2_angular();
     }
 }
-static void _ZFP_P2JointRevolute_updateLimits(
-        ZF_OUT float &lowerAngle
-        , ZF_OUT float &upperAngle
-        , ZF_IN zffloat angularLimitMin
-        , ZF_IN zffloat angularLimitMax
-        ) {
-    if(angularLimitMin <= angularLimitMax) {
-        lowerAngle = (0 - angularLimitMax) * B2_PI / 180;
-        upperAngle = (0 - angularLimitMin) * B2_PI / 180;
-    }
-    else {
-        lowerAngle = (0 - angularLimitMin) * B2_PI / 180;
-        upperAngle = (0 - angularLimitMax) * B2_PI / 180;
-    }
-}
 ZFPROPERTY_ON_UPDATE_DEFINE(P2JointRevolute, zffloat, p2_angularLimitMin) {
     if(B2_IS_NON_NULL(_ZFP_P2Joint_d->implJointId)) {
-        if(this->p2_angularLimitMin() < this->p2_angularLimitMax()) {
+        if(this->p2_angularLimitMin() != -P2_MAX() || this->p2_angularLimitMax() != P2_MAX()) {
             b2RevoluteJoint_EnableLimit(_ZFP_P2Joint_d->implJointId, zftrue);
-            float lowerAngle, upperAngle;
-            _ZFP_P2JointRevolute_updateLimits(lowerAngle, upperAngle, this->p2_angularLimitMin(), this->p2_angularLimitMax());
-            b2RevoluteJoint_SetLimits(_ZFP_P2Joint_d->implJointId, lowerAngle, upperAngle);
+            if(this->p2_angularLimitMin() <= this->p2_angularLimitMax()) {
+                b2RevoluteJoint_SetLimits(_ZFP_P2Joint_d->implJointId
+                        , b2RadFromZF(this->p2_angularLimitMax())
+                        , b2RadFromZF(this->p2_angularLimitMin())
+                        );
+            }
+            else {
+                b2RevoluteJoint_SetLimits(_ZFP_P2Joint_d->implJointId
+                        , b2RadFromZF(this->p2_angularLimitMin())
+                        , b2RadFromZF(this->p2_angularLimitMin())
+                        );
+            }
         }
         else {
             b2RevoluteJoint_EnableLimit(_ZFP_P2Joint_d->implJointId, zffalse);
@@ -1154,11 +1191,20 @@ ZFPROPERTY_ON_UPDATE_DEFINE(P2JointRevolute, zffloat, p2_angularLimitMin) {
 }
 ZFPROPERTY_ON_UPDATE_DEFINE(P2JointRevolute, zffloat, p2_angularLimitMax) {
     if(B2_IS_NON_NULL(_ZFP_P2Joint_d->implJointId)) {
-        if(this->p2_angularLimitMin() < this->p2_angularLimitMax()) {
+        if(this->p2_angularLimitMin() != -P2_MAX() || this->p2_angularLimitMax() != P2_MAX()) {
             b2RevoluteJoint_EnableLimit(_ZFP_P2Joint_d->implJointId, zftrue);
-            float lowerAngle, upperAngle;
-            _ZFP_P2JointRevolute_updateLimits(lowerAngle, upperAngle, this->p2_angularLimitMin(), this->p2_angularLimitMax());
-            b2RevoluteJoint_SetLimits(_ZFP_P2Joint_d->implJointId, lowerAngle, upperAngle);
+            if(this->p2_angularLimitMin() <= this->p2_angularLimitMax()) {
+                b2RevoluteJoint_SetLimits(_ZFP_P2Joint_d->implJointId
+                        , b2RadFromZF(this->p2_angularLimitMax())
+                        , b2RadFromZF(this->p2_angularLimitMin())
+                        );
+            }
+            else {
+                b2RevoluteJoint_SetLimits(_ZFP_P2Joint_d->implJointId
+                        , b2RadFromZF(this->p2_angularLimitMin())
+                        , b2RadFromZF(this->p2_angularLimitMin())
+                        );
+            }
         }
         else {
             b2RevoluteJoint_EnableLimit(_ZFP_P2Joint_d->implJointId, zffalse);
@@ -1195,9 +1241,15 @@ void P2JointRevolute::p2impl_jointCreate(ZF_IN P2Body *ownerBody0, ZF_IN P2Body 
 
     implJointDef.referenceAngle = b2RadFromZF(ownerBody1->p2_rotation() - ownerBody0->p2_rotation() + this->p2_angularRef());
     implJointDef.targetAngle = b2RadFromZF(this->p2_angular());
-    if(this->p2_angularLimitMin() < this->p2_angularLimitMax()) {
+    if(this->p2_angularLimitMin() != -P2_MAX() || this->p2_angularLimitMax() != P2_MAX()) {
         implJointDef.enableLimit = zftrue;
-        _ZFP_P2JointRevolute_updateLimits(implJointDef.lowerAngle, implJointDef.upperAngle, this->p2_angularLimitMin(), this->p2_angularLimitMax());
+        if(this->p2_angularLimitMin() <= this->p2_angularLimitMax()) {
+            implJointDef.lowerAngle = b2RadFromZF(this->p2_angularLimitMax());
+        }
+        else {
+            implJointDef.lowerAngle = b2RadFromZF(this->p2_angularLimitMin());
+        }
+        implJointDef.upperAngle = b2RadFromZF(this->p2_angularLimitMin());
     }
     else {
         implJointDef.enableLimit = zffalse;
@@ -1270,9 +1322,20 @@ ZFMETHOD_DEFINE_0(P2JointPrismatic, zffloat, p2_distanceCur) {
 }
 ZFPROPERTY_ON_UPDATE_DEFINE(P2JointPrismatic, zffloat, p2_distanceLimitMin) {
     if(B2_IS_NON_NULL(_ZFP_P2Joint_d->implJointId)) {
-        if(this->p2_distanceLimitMin() < this->p2_distanceLimitMax()) {
+        if(this->p2_distanceLimitMin() != -P2_MAX() || this->p2_distanceLimitMax() != P2_MAX()) {
             b2PrismaticJoint_EnableLimit(_ZFP_P2Joint_d->implJointId, zftrue);
-            b2PrismaticJoint_SetLimits(_ZFP_P2Joint_d->implJointId, this->p2_distanceLimitMin(), this->p2_distanceLimitMax());
+            if(this->p2_distanceLimitMin() <= this->p2_distanceLimitMax()) {
+                b2PrismaticJoint_SetLimits(_ZFP_P2Joint_d->implJointId
+                        , (float)this->p2_distanceLimitMin()
+                        , (float)this->p2_distanceLimitMax()
+                        );
+            }
+            else {
+                b2PrismaticJoint_SetLimits(_ZFP_P2Joint_d->implJointId
+                        , (float)this->p2_distanceLimitMin()
+                        , (float)this->p2_distanceLimitMin()
+                        );
+            }
         }
         else {
             b2PrismaticJoint_EnableLimit(_ZFP_P2Joint_d->implJointId, zffalse);
@@ -1281,9 +1344,20 @@ ZFPROPERTY_ON_UPDATE_DEFINE(P2JointPrismatic, zffloat, p2_distanceLimitMin) {
 }
 ZFPROPERTY_ON_UPDATE_DEFINE(P2JointPrismatic, zffloat, p2_distanceLimitMax) {
     if(B2_IS_NON_NULL(_ZFP_P2Joint_d->implJointId)) {
-        if(this->p2_distanceLimitMin() < this->p2_distanceLimitMax()) {
+        if(this->p2_distanceLimitMin() != -P2_MAX() || this->p2_distanceLimitMax() != P2_MAX()) {
             b2PrismaticJoint_EnableLimit(_ZFP_P2Joint_d->implJointId, zftrue);
-            b2PrismaticJoint_SetLimits(_ZFP_P2Joint_d->implJointId, this->p2_distanceLimitMin(), this->p2_distanceLimitMax());
+            if(this->p2_distanceLimitMin() <= this->p2_distanceLimitMax()) {
+                b2PrismaticJoint_SetLimits(_ZFP_P2Joint_d->implJointId
+                        , (float)this->p2_distanceLimitMin()
+                        , (float)this->p2_distanceLimitMax()
+                        );
+            }
+            else {
+                b2PrismaticJoint_SetLimits(_ZFP_P2Joint_d->implJointId
+                        , (float)this->p2_distanceLimitMin()
+                        , (float)this->p2_distanceLimitMin()
+                        );
+            }
         }
         else {
             b2PrismaticJoint_EnableLimit(_ZFP_P2Joint_d->implJointId, zffalse);
@@ -1321,10 +1395,16 @@ void P2JointPrismatic::p2impl_jointCreate(ZF_IN P2Body *ownerBody0, ZF_IN P2Body
     implJointDef.localAxisA = b2Vec2FromZF(this->p2_axis());
     implJointDef.referenceAngle = b2RadFromZF(ownerBody1->p2_rotation() - ownerBody0->p2_rotation() + this->p2_angularRef());
     implJointDef.targetTranslation = this->p2_distance();
-    if(this->p2_distanceLimitMin() < this->p2_distanceLimitMax()) {
+    if(this->p2_distanceLimitMin() != -P2_MAX() || this->p2_distanceLimitMax() != P2_MAX()) {
         implJointDef.enableLimit = zftrue;
-        implJointDef.lowerTranslation = this->p2_distanceLimitMin();
-        implJointDef.upperTranslation = this->p2_distanceLimitMax();
+        if(this->p2_distanceLimitMin() <= this->p2_distanceLimitMax()) {
+            implJointDef.lowerTranslation = (float)this->p2_distanceLimitMin();
+            implJointDef.upperTranslation = (float)this->p2_distanceLimitMax();
+        }
+        else {
+            implJointDef.lowerTranslation = (float)this->p2_distanceLimitMin();
+            implJointDef.upperTranslation = (float)this->p2_distanceLimitMin();
+        }
     }
     else {
         implJointDef.enableLimit = zffalse;
@@ -1379,9 +1459,14 @@ ZFPROPERTY_ON_UPDATE_DEFINE(P2JointWheel, ZFUIPoint, p2_axis) {
 }
 ZFPROPERTY_ON_UPDATE_DEFINE(P2JointWheel, zffloat, p2_distanceLimitMin) {
     if(B2_IS_NON_NULL(_ZFP_P2Joint_d->implJointId)) {
-        if(this->p2_distanceLimitMin() < this->p2_distanceLimitMax()) {
+        if(this->p2_distanceLimitMin() != -P2_MAX() || this->p2_distanceLimitMax() != P2_MAX()) {
             b2WheelJoint_EnableLimit(_ZFP_P2Joint_d->implJointId, zftrue);
-            b2WheelJoint_SetLimits(_ZFP_P2Joint_d->implJointId, this->p2_distanceLimitMin(), this->p2_distanceLimitMax());
+            if(this->p2_distanceLimitMin() <= this->p2_distanceLimitMax()) {
+                b2WheelJoint_SetLimits(_ZFP_P2Joint_d->implJointId, this->p2_distanceLimitMin(), this->p2_distanceLimitMax());
+            }
+            else {
+                b2WheelJoint_SetLimits(_ZFP_P2Joint_d->implJointId, this->p2_distanceLimitMin(), this->p2_distanceLimitMin());
+            }
         }
         else {
             b2WheelJoint_EnableLimit(_ZFP_P2Joint_d->implJointId, zftrue);
@@ -1390,9 +1475,14 @@ ZFPROPERTY_ON_UPDATE_DEFINE(P2JointWheel, zffloat, p2_distanceLimitMin) {
 }
 ZFPROPERTY_ON_UPDATE_DEFINE(P2JointWheel, zffloat, p2_distanceLimitMax) {
     if(B2_IS_NON_NULL(_ZFP_P2Joint_d->implJointId)) {
-        if(this->p2_distanceLimitMin() < this->p2_distanceLimitMax()) {
+        if(this->p2_distanceLimitMin() != -P2_MAX() || this->p2_distanceLimitMax() != P2_MAX()) {
             b2WheelJoint_EnableLimit(_ZFP_P2Joint_d->implJointId, zftrue);
-            b2WheelJoint_SetLimits(_ZFP_P2Joint_d->implJointId, this->p2_distanceLimitMin(), this->p2_distanceLimitMax());
+            if(this->p2_distanceLimitMin() <= this->p2_distanceLimitMax()) {
+                b2WheelJoint_SetLimits(_ZFP_P2Joint_d->implJointId, this->p2_distanceLimitMin(), this->p2_distanceLimitMax());
+            }
+            else {
+                b2WheelJoint_SetLimits(_ZFP_P2Joint_d->implJointId, this->p2_distanceLimitMin(), this->p2_distanceLimitMin());
+            }
         }
         else {
             b2WheelJoint_EnableLimit(_ZFP_P2Joint_d->implJointId, zftrue);
@@ -1428,10 +1518,16 @@ void P2JointWheel::p2impl_jointCreate(ZF_IN P2Body *ownerBody0, ZF_IN P2Body *ow
     }
 
     implJointDef.localAxisA = b2Vec2FromZF(this->p2_axis());
-    if(this->p2_distanceLimitMin() < this->p2_distanceLimitMax()) {
+    if(this->p2_distanceLimitMin() != -P2_MAX() || this->p2_distanceLimitMax() != P2_MAX()) {
         implJointDef.enableLimit = zftrue;
-        implJointDef.lowerTranslation = this->p2_distanceLimitMin();
-        implJointDef.upperTranslation = this->p2_distanceLimitMax();
+        if(this->p2_distanceLimitMin() <= this->p2_distanceLimitMax()) {
+            implJointDef.lowerTranslation = this->p2_distanceLimitMin();
+            implJointDef.upperTranslation = this->p2_distanceLimitMax();
+        }
+        else {
+            implJointDef.lowerTranslation = this->p2_distanceLimitMin();
+            implJointDef.upperTranslation = this->p2_distanceLimitMin();
+        }
     }
     else {
         implJointDef.enableLimit = zffalse;
@@ -1597,6 +1693,7 @@ void P2JointMouse::p2impl_jointCreate(ZF_IN P2Body *ownerBody0, ZF_IN P2Body *ow
     implJointDef.bodyIdA = ownerBody0->_ZFP_P2Body_d->implBodyId;
     implJointDef.bodyIdB = ownerBody1->_ZFP_P2Body_d->implBodyId;
     implJointDef.target = b2Vec2FromZF(this->p2_position());
+    implJointDef.maxForce = 1000;
     _ZFP_P2Joint_d->implJointId = b2CreateMouseJoint(
             b2Body_GetWorld(ownerBody0->_ZFP_P2Body_d->implBodyId)
             , &implJointDef
@@ -1617,8 +1714,22 @@ ZFMETHOD_DEFINE_0(P2Body, P2World *, p2_ownerWorld) {
         ZFCoreAssert(B2_IS_NON_NULL(implWorldId));
         return (P2World *)(b2World_GetUserData(implWorldId));
     }
+    else if(_ZFP_P2Body_d->ownerUnit) {
+        return _ZFP_P2Body_d->ownerUnit->p2_ownerWorld();
+    }
     else {
         return zfnull;
+    }
+}
+
+ZFMETHOD_DEFINE_0(P2Body, void, p2_removeFromParent) {
+    if(_ZFP_P2Body_d->ownerUnit) {
+        if(_ZFP_P2Body_d->ownerUnit->p2_body() == this) {
+            _ZFP_P2Body_d->ownerUnit->p2_removeFromParent();
+        }
+        else {
+            _ZFP_P2Body_d->ownerUnit->p2_partRemove(this);
+        }
     }
 }
 
@@ -1857,7 +1968,7 @@ ZFMETHOD_DEFINE_0(P2Body, ZFUIPoint, p2_positionCur) {
         return b2Vec2ToZF(b2Body_GetPosition(_ZFP_P2Body_d->implBodyId));
     }
     else {
-        return ZFUIPointZero();
+        return this->p2_position();
     }
 }
 ZFMETHOD_DEFINE_0(P2Body, ZFUIPoint, p2_positionVelocityCur) {
@@ -1873,7 +1984,7 @@ ZFMETHOD_DEFINE_0(P2Body, zffloat, p2_rotationCur) {
         return b2RotToZF(b2Body_GetRotation(_ZFP_P2Body_d->implBodyId));
     }
     else {
-        return 0;
+        return this->p2_rotation();
     }
 }
 ZFMETHOD_DEFINE_0(P2Body, zffloat, p2_rotationVelocityCur) {
@@ -1989,6 +2100,12 @@ ZFOBJECT_REGISTER(P2Unit)
 
 ZFMETHOD_DEFINE_0(P2Unit, P2World *, p2_ownerWorld) {
     return _ZFP_P2Unit_d->ownerWorld;
+}
+
+ZFMETHOD_DEFINE_0(P2Unit, void, p2_removeFromParent) {
+    if(_ZFP_P2Unit_d->ownerWorld) {
+        _ZFP_P2Unit_d->ownerWorld->p2_unitRemove(this);
+    }
 }
 
 ZFPROPERTY_ON_UPDATE_DEFINE(P2Unit, zffloat, p2_unitScale) {
@@ -2333,20 +2450,30 @@ ZFMETHOD_DEFINE_0(P2World, void, p2_manualStep) {
 }
 
 ZFMETHOD_DEFINE_1(P2World, void, p2_unit
-        , ZFMP_IN(P2Unit *, unit)
+        , ZFMP_IN(ZFObject *, unitOrBody)
         ) {
-    ZFCoreAssert(unit && unit->p2_ownerWorld() == zfnull);
-    this->p2_unitList()->add(unit);
-    _ZFP_P2UnitAttach(this, unit);
-}
-ZFMETHOD_DEFINE_1(P2World, void, p2_unit
-        , ZFMP_IN(P2Body *, body)
-        ) {
-    ZFCoreAssert(body && body->p2_ownerUnit() == zfnull);
-    zfobj<P2Unit> unit;
-    unit->p2_body(body);
-    this->p2_unitList()->add(unit);
-    _ZFP_P2UnitAttach(this, unit);
+    if(unitOrBody == zfnull) {
+        // nothing to do
+    }
+    else if(unitOrBody->classData()->classIsTypeOf(P2Unit::ClassData())) {
+        P2Unit *unit = zfcast(P2Unit *, unitOrBody);
+        ZFCoreAssert(unit && unit->p2_ownerWorld() == zfnull);
+        this->p2_unitList()->add(unit);
+        _ZFP_P2UnitAttach(this, unit);
+    }
+    else if(unitOrBody->classData()->classIsTypeOf(P2Body::ClassData())) {
+        P2Body *body = zfcast(P2Body *, unitOrBody);
+        ZFCoreAssert(body && body->p2_ownerUnit() == zfnull);
+        zfobj<P2Unit> unit;
+        unit->p2_body(body);
+        this->p2_unitList()->add(unit);
+        _ZFP_P2UnitAttach(this, unit);
+    }
+    else {
+        ZFCoreCriticalMessage("must be P2Unit or P2Body, got: %s"
+                , unitOrBody
+                );
+    }
 }
 ZFMETHOD_DEFINE_0(P2World, zfindex, p2_unitCount) {
     return this->p2_unitList()->count();
@@ -2511,6 +2638,8 @@ ZFMETHOD_DEFINE_4(P2World, zfauto, p2_overlapTest
         , ZFMP_IN_OPT(zfflags, filterCategory, P2FilterMaskAll())
         ) {
     _ZFP_P2World_overlapTestContext context;
+    context.callback = callback;
+    context.zfargs.sender(this);
     b2QueryFilter implFilter;
     implFilter.maskBits = (uint64_t)filterMask;
     implFilter.categoryBits = (uint64_t)filterCategory;
@@ -2542,6 +2671,8 @@ ZFMETHOD_DEFINE_5(P2World, zfauto, p2_rayTest
         , ZFMP_IN_OPT(zfflags, filterCategory, P2FilterMaskAll())
         ) {
     _ZFP_P2World_overlapTestContext context;
+    context.callback = callback;
+    context.zfargs.sender(this);
     b2QueryFilter implFilter;
     implFilter.maskBits = (uint64_t)filterMask;
     implFilter.categoryBits = (uint64_t)filterCategory;
@@ -2682,14 +2813,14 @@ void P2World::objectOnDeallocPrepare(void) {
     zfsuper::objectOnDeallocPrepare();
 }
 
-ZFMETHOD_FUNC_DEFINE_3(ZFUIPoint, P2ToLocalPosition
+ZFMETHOD_FUNC_DEFINE_3(ZFUIPoint, P2LocalFromWorld
         , ZFMP_IN(const ZFUIPoint &, relPosition)
         , ZFMP_IN(zffloat, relRotation)
         , ZFMP_IN(ZFUIPoint, worldPosition)
         ) {
     return b2Vec2ToZF(b2InvTransformPoint(b2TransformFromZF(relPosition, relRotation), b2Vec2FromZF(worldPosition)));
 }
-ZFMETHOD_FUNC_DEFINE_3(ZFUIPoint, P2ToWorldPosition
+ZFMETHOD_FUNC_DEFINE_3(ZFUIPoint, P2LocalToWorld
         , ZFMP_IN(const ZFUIPoint &, relPosition)
         , ZFMP_IN(zffloat, relRotation)
         , ZFMP_IN(ZFUIPoint, localPosition)
@@ -2844,9 +2975,12 @@ static void _ZFP_P2UnitDetach(ZF_IN P2Unit *unit) {
     }
 
     _ZFP_P2BodyDetach(unit->p2_body());
+    unit->p2_body()->_ZFP_P2Body_d->ownerUnit = unit;
     ZFArray *partList = unit->p2_partList();
     for(zfindex i = partList->count() - 1; i != zfindexMax(); --i) {
-        _ZFP_P2BodyDetach(partList->get(i));
+        P2Body *part = partList->get(i);
+        _ZFP_P2BodyDetach(part);
+        part->_ZFP_P2Body_d->ownerUnit = unit;
     }
 
     unit->_ZFP_P2Unit_d->ownerWorld = zfnull;
@@ -2935,25 +3069,25 @@ static void _ZFP_P2WorldImplStep_pendingJoint(ZF_IN P2World *world) {
     zfimplhashmap<P2Joint *, zfbool> &pendingJoint = world->_ZFP_P2World_d->pendingJoint;
     for(zfimplhashmap<P2Joint *, zfbool>::iterator it = pendingJoint.begin(); it != pendingJoint.end(); ++it) {
         P2Joint *joint = it->first;
-        if(!joint->p2_bodyId0()) {
-            ZFLogTrim("P2Joint: p2_bodyId0 not set, joint: %s", joint);
-            continue;
-        }
-        if(!joint->p2_bodyId1()) {
-            ZFLogTrim("P2Joint: p2_bodyId1 not set, joint: %s", joint);
-            continue;
-        }
-        P2Body *ownerBody0 = zfnull;
-        P2Body *ownerBody1 = zfnull;
+        P2Body *ownerBody0 = joint->_ZFP_P2Joint_d->body0;
+        P2Body *ownerBody1 = joint->_ZFP_P2Joint_d->body1;
         if(joint->_ZFP_P2Joint_d->jointOwner == world) {
-            ownerBody0 = _ZFP_P2WorldPrivate::bodyFind(world, joint->p2_bodyId0());
-            ownerBody1 = _ZFP_P2WorldPrivate::bodyFind(world, joint->p2_bodyId1());
+            if(ownerBody0 == zfnull) {
+                ownerBody0 = _ZFP_P2WorldPrivate::bodyFind(world, joint->p2_bodyId0());
+            }
+            if(ownerBody1 == zfnull) {
+                ownerBody1 = _ZFP_P2WorldPrivate::bodyFind(world, joint->p2_bodyId1());
+            }
         }
         else {
             P2Unit *unit = zfcast(P2Unit *, joint->_ZFP_P2Joint_d->jointOwner);
             if(unit) {
-                ownerBody0 = unit->p2_bodyFind(joint->p2_bodyId0());
-                ownerBody1 = unit->p2_bodyFind(joint->p2_bodyId1());
+                if(ownerBody0 == zfnull) {
+                    ownerBody0 = unit->p2_bodyFind(joint->p2_bodyId0());
+                }
+                if(ownerBody1 == zfnull) {
+                    ownerBody1 = unit->p2_bodyFind(joint->p2_bodyId1());
+                }
             }
         }
         if(ownerBody0 == zfnull) {

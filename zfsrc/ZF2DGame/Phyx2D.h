@@ -13,6 +13,15 @@ zfclassFwd P2Body;
 zfclassFwd P2Unit;
 zfclassFwd P2World;
 
+/** @brief the missing PI in math.h */
+inline zffloat P2_PI(void) {
+    return 3.14159265359f;
+}
+/** @brief a dummy value indicates largest value in physics world */
+inline zffloat P2_MAX(void) {
+    return 999999;
+}
+
 /** @brief see #P2World */
 #define P2FilterMaskAll() ((zfflags)-1)
 /** @brief see #P2World */
@@ -210,6 +219,11 @@ public:
     ZFMETHOD_DECLARE_0(P2Body *, p2_ownerBody1)
     /** @brief see #P2World */
     ZFMETHOD_DECLARE_0(P2World *, p2_ownerWorld)
+    /**@brief see #P2World, joint's owner, maybe #P2World or #P2Unit */
+    ZFMETHOD_DECLARE_0(ZFObject *, p2_owner)
+
+    /** @brief see #P2World */
+    ZFMETHOD_DECLARE_0(void, p2_removeFromParent)
 
 public:
     /** @brief see #P2World */
@@ -219,6 +233,20 @@ public:
     ZFPROPERTY_ASSIGN(zfstring, p2_bodyId0)
     /** @brief see #P2World */
     ZFPROPERTY_ASSIGN(zfstring, p2_bodyId1)
+
+    /** @brief see #P2World */
+    ZFMETHOD_DECLARE_1(void, p2_body0
+            , ZFMP_IN(P2Body *, v)
+            )
+    /** @brief see #P2World */
+    ZFMETHOD_DECLARE_0(P2Body *, p2_body0)
+
+    /** @brief see #P2World */
+    ZFMETHOD_DECLARE_1(void, p2_body1
+            , ZFMP_IN(P2Body *, v)
+            )
+    /** @brief see #P2World */
+    ZFMETHOD_DECLARE_0(P2Body *, p2_body1)
 
     /** @brief see #P2World */
     ZFPROPERTY_ASSIGN(zfbool, p2_contactEnable)
@@ -296,13 +324,13 @@ public:
     /** @brief see #P2World */
     ZFPROPERTY_ASSIGN(zffloat, p2_distance, 1)
     ZFPROPERTY_ON_UPDATE_DECLARE(zffloat, p2_distance)
-    /** @brief see #P2World, >0 to enable limit */
+    /** @brief see #P2World */
     ZFMETHOD_DECLARE_0(zffloat, p2_distanceCur)
-    /** @brief see #P2World, <0 to enable limit */
-    ZFPROPERTY_ASSIGN(zffloat, p2_distanceLimitMin)
+    /** @brief see #P2World */
+    ZFPROPERTY_ASSIGN(zffloat, p2_distanceLimitMin, -P2_MAX())
     ZFPROPERTY_ON_UPDATE_DECLARE(zffloat, p2_distanceLimitMin)
-    /** @brief see #P2World, >0 to enable limit */
-    ZFPROPERTY_ASSIGN(zffloat, p2_distanceLimitMax)
+    /** @brief see #P2World */
+    ZFPROPERTY_ASSIGN(zffloat, p2_distanceLimitMax, P2_MAX())
     ZFPROPERTY_ON_UPDATE_DECLARE(zffloat, p2_distanceLimitMax)
 
     ZFPROPERTY_ON_UPDATE_DECLARE(ZFUIPoint, p2_anchor0)
@@ -330,10 +358,10 @@ public:
     /** @brief see #P2World */
     ZFMETHOD_DECLARE_0(zffloat, p2_angularCur)
     /** @brief see #P2World */
-    ZFPROPERTY_ASSIGN(zffloat, p2_angularLimitMin)
+    ZFPROPERTY_ASSIGN(zffloat, p2_angularLimitMin, -P2_MAX())
     ZFPROPERTY_ON_UPDATE_DECLARE(zffloat, p2_angularLimitMin)
     /** @brief see #P2World */
-    ZFPROPERTY_ASSIGN(zffloat, p2_angularLimitMax)
+    ZFPROPERTY_ASSIGN(zffloat, p2_angularLimitMax, P2_MAX())
     ZFPROPERTY_ON_UPDATE_DECLARE(zffloat, p2_angularLimitMax)
 
     ZFPROPERTY_ON_UPDATE_DECLARE(ZFUIPoint, p2_anchor0)
@@ -364,10 +392,10 @@ public:
     /** @brief see #P2World */
     ZFMETHOD_DECLARE_0(zffloat, p2_distanceCur)
     /** @brief see #P2World */
-    ZFPROPERTY_ASSIGN(zffloat, p2_distanceLimitMin)
+    ZFPROPERTY_ASSIGN(zffloat, p2_distanceLimitMin, -P2_MAX())
     ZFPROPERTY_ON_UPDATE_DECLARE(zffloat, p2_distanceLimitMin)
     /** @brief see #P2World */
-    ZFPROPERTY_ASSIGN(zffloat, p2_distanceLimitMax)
+    ZFPROPERTY_ASSIGN(zffloat, p2_distanceLimitMax, P2_MAX())
     ZFPROPERTY_ON_UPDATE_DECLARE(zffloat, p2_distanceLimitMax)
 
     ZFPROPERTY_ON_UPDATE_DECLARE(ZFUIPoint, p2_anchor0)
@@ -390,10 +418,10 @@ public:
     ZFPROPERTY_ASSIGN(ZFUIPoint, p2_axis)
     ZFPROPERTY_ON_UPDATE_DECLARE(ZFUIPoint, p2_axis)
     /** @brief see #P2World */
-    ZFPROPERTY_ASSIGN(zffloat, p2_distanceLimitMin)
+    ZFPROPERTY_ASSIGN(zffloat, p2_distanceLimitMin, -P2_MAX())
     ZFPROPERTY_ON_UPDATE_DECLARE(zffloat, p2_distanceLimitMin)
     /** @brief see #P2World */
-    ZFPROPERTY_ASSIGN(zffloat, p2_distanceLimitMax)
+    ZFPROPERTY_ASSIGN(zffloat, p2_distanceLimitMax, P2_MAX())
     ZFPROPERTY_ON_UPDATE_DECLARE(zffloat, p2_distanceLimitMax)
 
     ZFPROPERTY_ON_UPDATE_DECLARE(ZFUIPoint, p2_anchor0)
@@ -519,6 +547,9 @@ public:
     ZFMETHOD_DECLARE_0(P2Unit *, p2_ownerUnit)
     /** @brief see #P2World */
     ZFMETHOD_DECLARE_0(P2World *, p2_ownerWorld)
+
+    /** @brief see #P2World, note: auto remove #p2_ownerUnit if this body is main #P2Unit::p2_body */
+    ZFMETHOD_DECLARE_0(void, p2_removeFromParent)
 
     /** @brief see #P2World */
     ZFPROPERTY_RETAIN_READONLY(ZFArray *, p2_shapeList, zfobj<ZFArray>())
@@ -776,6 +807,9 @@ public:
 public:
     /** @brief see #P2World */
     ZFMETHOD_DECLARE_0(P2World *, p2_ownerWorld)
+
+    /** @brief see #P2World */
+    ZFMETHOD_DECLARE_0(void, p2_removeFromParent)
 
 public:
     /** @brief see #P2World */
@@ -1164,11 +1198,7 @@ public:
     ZFPROPERTY_RETAIN_READONLY(ZFArray *, p2_unitList, zfobj<ZFArray>())
     /** @brief see #P2World */
     ZFMETHOD_DECLARE_1(void, p2_unit
-            , ZFMP_IN(P2Unit *, unit)
-            )
-    /** @brief see #P2World */
-    ZFMETHOD_DECLARE_1(void, p2_unit
-            , ZFMP_IN(P2Body *, body)
+            , ZFMP_IN(ZFObject *, unitOrBody)
             )
     /** @brief see #P2World */
     ZFMETHOD_DECLARE_0(zfindex, p2_unitCount)
@@ -1289,14 +1319,15 @@ public:
     _ZFP_P2WorldPrivate *_ZFP_P2World_d;
 };
 
+// ============================================================
 /** @brief see #P2World */
-ZFMETHOD_FUNC_DECLARE_3(ZFLIB_ZF2DGame, ZFUIPoint, P2ToLocalPosition
+ZFMETHOD_FUNC_DECLARE_3(ZFLIB_ZF2DGame, ZFUIPoint, P2LocalFromWorld
         , ZFMP_IN(const ZFUIPoint &, relPosition)
         , ZFMP_IN(zffloat, relRotation)
         , ZFMP_IN(ZFUIPoint, worldPosition)
         )
 /** @brief see #P2World */
-ZFMETHOD_FUNC_DECLARE_3(ZFLIB_ZF2DGame, ZFUIPoint, P2ToWorldPosition
+ZFMETHOD_FUNC_DECLARE_3(ZFLIB_ZF2DGame, ZFUIPoint, P2LocalToWorld
         , ZFMP_IN(const ZFUIPoint &, relPosition)
         , ZFMP_IN(zffloat, relRotation)
         , ZFMP_IN(ZFUIPoint, localPosition)

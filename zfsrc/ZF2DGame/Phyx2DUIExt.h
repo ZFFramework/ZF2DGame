@@ -52,10 +52,15 @@ zfclass ZFLIB_ZF2DGame P2WorldView : zfextend ZFUIView {
     ZFOBJECT_DECLARE(P2WorldView, ZFUIView)
 
 public:
-    /** @brief draw debug colors to indicates all body/shape/joint */
+    /** @brief whether draw debug colors to indicates all body/shape/joint */
     ZFPROPERTY_ASSIGN(zfbool, debugDraw)
     ZFPROPERTY_ON_ATTACH_DECLARE(zfbool, debugDraw)
     ZFPROPERTY_ON_DETACH_DECLARE(zfbool, debugDraw)
+
+    /** @brief whether allow touch events to draw bodies, for debug use only */
+    ZFPROPERTY_ASSIGN(zfbool, debugMouse)
+    ZFPROPERTY_ON_ATTACH_DECLARE(zfbool, debugMouse)
+    ZFPROPERTY_ON_DETACH_DECLARE(zfbool, debugMouse)
 
     /**
      * @brief tiled bg automatically updated with #P2World::p2_UIOffset
@@ -121,45 +126,149 @@ private:
 };
 
 // ============================================================
-/** @brief transform coordinate */
-ZFMETHOD_FUNC_DECLARE_6(ZFLIB_ZF2DGame, void, P2CoordinateToRectT
+/** @brief transform coordinate between UI and P2 */
+ZFMETHOD_FUNC_DECLARE_2(ZFLIB_ZF2DGame, void, P2UIRectFromBodyT
         , ZFMP_OUT(ZFUIRect &, rect)
-        , ZFMP_IN(P2World *, world)
+        , ZFMP_IN(P2Body *, body)
+        )
+/** @brief transform coordinate between UI and P2 */
+ZFMETHOD_FUNC_DECLARE_1(ZFLIB_ZF2DGame, ZFUIRect, P2UIRectFromBody
+        , ZFMP_IN(P2Body *, body)
+        )
+
+/** @brief transform coordinate between UI and P2 */
+ZFMETHOD_FUNC_DECLARE_8(ZFLIB_ZF2DGame, void, P2UIRectFromBodyT
+        , ZFMP_OUT(ZFUIRect &, rect)
+        , ZFMP_IN(zffloat, worldUIHeight)
+        , ZFMP_IN(zffloat, worldUIScale)
+        , ZFMP_IN(const ZFUIPoint &, worldUIOffset)
         , ZFMP_IN(const ZFUIPoint &, position)
         , ZFMP_IN(const ZFUIRect &, aabbLocal)
         , ZFMP_IN_OPT(zffloat, rotation, 0)
         , ZFMP_IN_OPT(const ZFUIPoint &, centerOfMass, ZFUIPointZero())
         )
-/** @brief transform coordinate */
-ZFMETHOD_FUNC_DECLARE_5(ZFLIB_ZF2DGame, ZFUIRect, P2CoordinateToRect
-        , ZFMP_IN(P2World *, world)
+/** @brief transform coordinate between UI and P2 */
+ZFMETHOD_FUNC_DECLARE_7(ZFLIB_ZF2DGame, ZFUIRect, P2UIRectFromBody
+        , ZFMP_IN(zffloat, worldUIHeight)
+        , ZFMP_IN(zffloat, worldUIScale)
+        , ZFMP_IN(const ZFUIPoint &, worldUIOffset)
         , ZFMP_IN(const ZFUIPoint &, position)
         , ZFMP_IN(const ZFUIRect &, aabbLocal)
         , ZFMP_IN_OPT(zffloat, rotation, 0)
         , ZFMP_IN_OPT(const ZFUIPoint &, centerOfMass, ZFUIPointZero())
         )
 
-/** @brief transform coordinate */
-ZFMETHOD_FUNC_DECLARE_3(ZFLIB_ZF2DGame, void, P2AABBToRectT
+// ============================================================
+/** @brief transform coordinate between UI and P2 */
+ZFMETHOD_FUNC_DECLARE_3(ZFLIB_ZF2DGame, void, P2UIPointFromWorldT
+        , ZFMP_OUT(ZFUIPoint &, pos)
+        , ZFMP_IN(P2World *, world)
+        , ZFMP_IN(const ZFUIPoint &, worldPos)
+        )
+/** @brief transform coordinate between UI and P2 */
+ZFMETHOD_FUNC_DECLARE_2(ZFLIB_ZF2DGame, ZFUIPoint, P2UIPointFromWorld
+        , ZFMP_IN(P2World *, world)
+        , ZFMP_IN(const ZFUIPoint &, worldPos)
+        )
+
+/** @brief transform coordinate between UI and P2 */
+ZFMETHOD_FUNC_DECLARE_3(ZFLIB_ZF2DGame, void, P2UIPointToWorldT
+        , ZFMP_OUT(ZFUIPoint &, worldPos)
+        , ZFMP_IN(P2World *, world)
+        , ZFMP_IN(const ZFUIPoint &, pos)
+        )
+/** @brief transform coordinate between UI and P2 */
+ZFMETHOD_FUNC_DECLARE_2(ZFLIB_ZF2DGame, ZFUIPoint, P2UIPointToWorld
+        , ZFMP_IN(P2World *, world)
+        , ZFMP_IN(const ZFUIPoint &, pos)
+        )
+
+/** @brief transform coordinate between UI and P2 */
+ZFMETHOD_FUNC_DECLARE_5(ZFLIB_ZF2DGame, void, P2UIPointFromWorldT
+        , ZFMP_OUT(ZFUIPoint &, pos)
+        , ZFMP_IN(zffloat, worldUIHeight)
+        , ZFMP_IN(zffloat, worldUIScale)
+        , ZFMP_IN(const ZFUIPoint &, worldUIOffset)
+        , ZFMP_IN(const ZFUIPoint &, worldPos)
+        )
+/** @brief transform coordinate between UI and P2 */
+ZFMETHOD_FUNC_DECLARE_4(ZFLIB_ZF2DGame, ZFUIPoint, P2UIPointFromWorld
+        , ZFMP_IN(zffloat, worldUIHeight)
+        , ZFMP_IN(zffloat, worldUIScale)
+        , ZFMP_IN(const ZFUIPoint &, worldUIOffset)
+        , ZFMP_IN(const ZFUIPoint &, worldPos)
+        )
+
+/** @brief transform coordinate between UI and P2 */
+ZFMETHOD_FUNC_DECLARE_5(ZFLIB_ZF2DGame, void, P2UIPointToWorldT
+        , ZFMP_OUT(ZFUIPoint &, worldPos)
+        , ZFMP_IN(zffloat, worldUIHeight)
+        , ZFMP_IN(zffloat, worldUIScale)
+        , ZFMP_IN(const ZFUIPoint &, worldUIOffset)
+        , ZFMP_IN(const ZFUIPoint &, pos)
+        )
+/** @brief transform coordinate between UI and P2 */
+ZFMETHOD_FUNC_DECLARE_4(ZFLIB_ZF2DGame, ZFUIPoint, P2UIPointToWorld
+        , ZFMP_IN(zffloat, worldUIHeight)
+        , ZFMP_IN(zffloat, worldUIScale)
+        , ZFMP_IN(const ZFUIPoint &, worldUIOffset)
+        , ZFMP_IN(const ZFUIPoint &, pos)
+        )
+
+// ============================================================
+/** @brief transform coordinate between UI and P2 */
+ZFMETHOD_FUNC_DECLARE_3(ZFLIB_ZF2DGame, void, P2UIRectFromAABBT
         , ZFMP_OUT(ZFUIRect &, rect)
         , ZFMP_IN(P2World *, world)
         , ZFMP_IN(const ZFUIRect &, aabb)
         )
-/** @brief transform coordinate */
-ZFMETHOD_FUNC_DECLARE_2(ZFLIB_ZF2DGame, ZFUIRect, P2AABBToRect
+/** @brief transform coordinate between UI and P2 */
+ZFMETHOD_FUNC_DECLARE_2(ZFLIB_ZF2DGame, ZFUIRect, P2UIRectFromAABB
         , ZFMP_IN(P2World *, world)
         , ZFMP_IN(const ZFUIRect &, aabb)
         )
 
-/** @brief transform coordinate */
-ZFMETHOD_FUNC_DECLARE_3(ZFLIB_ZF2DGame, void, P2AABBFromRectT
+/** @brief transform coordinate between UI and P2 */
+ZFMETHOD_FUNC_DECLARE_3(ZFLIB_ZF2DGame, void, P2UIRectToAABBT
         , ZFMP_OUT(ZFUIRect &, aabb)
         , ZFMP_IN(P2World *, world)
         , ZFMP_IN(const ZFUIRect &, rect)
         )
-/** @brief transform coordinate */
-ZFMETHOD_FUNC_DECLARE_2(ZFLIB_ZF2DGame, ZFUIRect, P2AABBFromRect
+/** @brief transform coordinate between UI and P2 */
+ZFMETHOD_FUNC_DECLARE_2(ZFLIB_ZF2DGame, ZFUIRect, P2UIRectToAABB
         , ZFMP_IN(P2World *, world)
+        , ZFMP_IN(const ZFUIRect &, rect)
+        )
+
+/** @brief transform coordinate between UI and P2 */
+ZFMETHOD_FUNC_DECLARE_5(ZFLIB_ZF2DGame, void, P2UIRectFromAABBT
+        , ZFMP_OUT(ZFUIRect &, rect)
+        , ZFMP_IN(zffloat, worldUIHeight)
+        , ZFMP_IN(zffloat, worldUIScale)
+        , ZFMP_IN(const ZFUIPoint &, worldUIOffset)
+        , ZFMP_IN(const ZFUIRect &, aabb)
+        )
+/** @brief transform coordinate between UI and P2 */
+ZFMETHOD_FUNC_DECLARE_4(ZFLIB_ZF2DGame, ZFUIRect, P2UIRectFromAABB
+        , ZFMP_IN(zffloat, worldUIHeight)
+        , ZFMP_IN(zffloat, worldUIScale)
+        , ZFMP_IN(const ZFUIPoint &, worldUIOffset)
+        , ZFMP_IN(const ZFUIRect &, aabb)
+        )
+
+/** @brief transform coordinate between UI and P2 */
+ZFMETHOD_FUNC_DECLARE_5(ZFLIB_ZF2DGame, void, P2UIRectToAABBT
+        , ZFMP_OUT(ZFUIRect &, aabb)
+        , ZFMP_IN(zffloat, worldUIHeight)
+        , ZFMP_IN(zffloat, worldUIScale)
+        , ZFMP_IN(const ZFUIPoint &, worldUIOffset)
+        , ZFMP_IN(const ZFUIRect &, rect)
+        )
+/** @brief transform coordinate between UI and P2 */
+ZFMETHOD_FUNC_DECLARE_4(ZFLIB_ZF2DGame, ZFUIRect, P2UIRectToAABB
+        , ZFMP_IN(zffloat, worldUIHeight)
+        , ZFMP_IN(zffloat, worldUIScale)
+        , ZFMP_IN(const ZFUIPoint &, worldUIOffset)
         , ZFMP_IN(const ZFUIRect &, rect)
         )
 

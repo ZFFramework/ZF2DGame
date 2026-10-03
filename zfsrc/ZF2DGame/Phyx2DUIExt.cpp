@@ -1,6 +1,5 @@
 #include "Phyx2DUIExt.h"
 
-#include "../../zfsrc_ext/ZFImpl/_repo/box2d/box2d/box2d.h"
 #include <cmath> // for coordinate conv
 
 ZF_NAMESPACE_GLOBAL_BEGIN
@@ -41,18 +40,26 @@ public:
     zfoverride
     virtual void bodyAdd(ZF_IN P2World *world, ZF_IN P2Body *body) {
         ZFUIView *bodyView = zfcast(ZFUIView *, body);
-        container->child(bodyView);
-        _bodyPosUpdate(body, bodyView, body->p2_position(), body->p2_rotation());
+        if(bodyView) {
+            container->child(bodyView);
+            _bodyPosUpdate(body, bodyView, body->p2_position(), body->p2_rotation());
+        }
     }
     zfoverride
     virtual void bodyRemove(ZF_IN P2World *world, ZF_IN P2Body *body) {
-        zfcast(ZFUIView *, body)->removeFromParent();
+        ZFUIView *bodyView = zfcast(ZFUIView *, body);
+        if(bodyView) {
+            bodyView->removeFromParent();
+        }
     }
     zfoverride
     virtual void bodyMoveEvent(ZF_IN P2World *world, ZF_IN P2BodyMoveEvent *event) {
         for(zfindex i = event->p2_moveEventList.count() - 1; i != zfindexMax(); --i) {
             P2BodyMoveEventData const &data = event->p2_moveEventList[i];
-            _bodyPosUpdate(data.p2_body, zfcast(ZFUIView *, data.p2_body), data.p2_position, data.p2_rotation);
+            ZFUIView *bodyView = zfcast(ZFUIView *, data.p2_body);
+            if(bodyView) {
+                _bodyPosUpdate(data.p2_body, bodyView, data.p2_position, data.p2_rotation);
+            }
         }
     }
     zfoverride
@@ -109,8 +116,10 @@ private:
     void _bodyPosUpdate(ZF_IN P2Body *body, ZF_IN ZFUIView *bodyView, ZF_IN const ZFUIPoint &position, ZF_IN zffloat rotation) {
         bodyView->UIScale(body->p2_ownerUnit()->p2_unitScale());
         bodyView->rotateZ(rotation);
-        bodyView->viewFrame(P2CoordinateToRect(
-                    world
+        bodyView->viewFrame(P2UIRectFromBody(
+                    worldView->height()
+                    , world->p2_UIScale()
+                    , world->p2_UIOffset()
                     , position
                     , body->p2_AABBLocal()
                     , rotation
@@ -224,43 +233,75 @@ void P2WorldView::layoutOnLayout(ZF_IN const ZFUIRect &bounds) {
 }
 
 // ============================================================
-ZFMETHOD_FUNC_DEFINE_6(void, P2CoordinateToRectT
+ZFMETHOD_FUNC_DEFINE_2(void, P2UIRectFromBodyT
         , ZFMP_OUT(ZFUIRect &, rect)
-        , ZFMP_IN(P2World *, world)
+        , ZFMP_IN(P2Body *, body)
+        ) {
+    if(body == zfnull || body->p2_ownerWorld() == zfnull) {
+        rect = ZFUIRectZero();
+    }
+    else {
+        P2World *world = body->p2_ownerWorld();
+        P2UIRectFromBodyT(
+                rect
+                , zfcast(ZFUIView *, world)->height()
+                , world->p2_UIScale()
+                , world->p2_UIOffset()
+                , body->p2_positionCur()
+                , body->p2_AABBLocal()
+                , body->p2_rotationCur()
+                , body->p2_centerOfMass()
+                );
+    }
+}
+ZFMETHOD_FUNC_DEFINE_1(ZFUIRect, P2UIRectFromBody
+        , ZFMP_IN(P2Body *, body)
+        ) {
+    ZFUIRect ret;
+    P2UIRectFromBodyT(ret, body);
+    return ret;
+}
+
+ZFMETHOD_FUNC_DEFINE_8(void, P2UIRectFromBodyT
+        , ZFMP_OUT(ZFUIRect &, rect)
+        , ZFMP_IN(zffloat, worldUIHeight)
+        , ZFMP_IN(zffloat, worldUIScale)
+        , ZFMP_IN(const ZFUIPoint &, worldUIOffset)
         , ZFMP_IN(const ZFUIPoint &, position)
         , ZFMP_IN(const ZFUIRect &, aabbLocal)
         , ZFMP_IN_OPT(zffloat, rotation, 0)
         , ZFMP_IN_OPT(const ZFUIPoint &, centerOfMass, ZFUIPointZero())
         ) {
-    zffloat r = (zffloat)(rotation * B2_PI / 180);
+    zffloat r = (zffloat)(rotation * P2_PI() / 180);
     zffloat cr = cos(r);
     zffloat sr = sin(r);
     zffloat x = position.x + centerOfMass.x * cr + centerOfMass.y * sr - centerOfMass.x;
     zffloat y = position.y - centerOfMass.x * sr + centerOfMass.y * cr - centerOfMass.y;
     zffloat w = aabbLocal.width;
     zffloat h = aabbLocal.height;
-    zffloat s = world->p2_UIScale();
-    zffloat H = zfcast(P2WorldView *, world)->height() / s;
-    const ZFUIPoint &offset = world->p2_UIOffset();
     zffloat dx = w / 2 - (centerOfMass.x - aabbLocal.x);
     zffloat dy = h / 2 - (centerOfMass.y - aabbLocal.y);
 
-    rect.x = (x + (dx * cr + dy * sr) - w / 2 + offset.x) * s;
-    rect.y = (H - (y + (-dx * sr + dy * cr)) - h / 2 - offset.y) * s;
-    rect.width = w * s;
-    rect.height = h * s;
+    rect.x = (x + (dx * cr + dy * sr) - w / 2 + worldUIOffset.x) * worldUIScale;
+    rect.y = worldUIHeight + (-(y + (-dx * sr + dy * cr)) - h / 2 - worldUIOffset.y) * worldUIScale;
+    rect.width = w * worldUIScale;
+    rect.height = h * worldUIScale;
 }
-ZFMETHOD_FUNC_DEFINE_5(ZFUIRect, P2CoordinateToRect
-        , ZFMP_IN(P2World *, world)
+ZFMETHOD_FUNC_DEFINE_7(ZFUIRect, P2UIRectFromBody
+        , ZFMP_IN(zffloat, worldUIHeight)
+        , ZFMP_IN(zffloat, worldUIScale)
+        , ZFMP_IN(const ZFUIPoint &, worldUIOffset)
         , ZFMP_IN(const ZFUIPoint &, position)
         , ZFMP_IN(const ZFUIRect &, aabbLocal)
         , ZFMP_IN_OPT(zffloat, rotation, 0)
         , ZFMP_IN_OPT(const ZFUIPoint &, centerOfMass, ZFUIPointZero())
         ) {
     ZFUIRect rect;
-    P2CoordinateToRectT(
+    P2UIRectFromBodyT(
             rect
-            , world
+            , worldUIHeight
+            , worldUIScale
+            , worldUIOffset
             , position
             , aabbLocal
             , rotation
@@ -269,25 +310,148 @@ ZFMETHOD_FUNC_DEFINE_5(ZFUIRect, P2CoordinateToRect
     return rect;
 }
 
-ZFMETHOD_FUNC_DEFINE_3(void, P2AABBToRectT
+// ============================================================
+ZFMETHOD_FUNC_DEFINE_3(void, P2UIPointFromWorldT
+        , ZFMP_OUT(ZFUIPoint &, pos)
+        , ZFMP_IN(P2World *, world)
+        , ZFMP_IN(const ZFUIPoint &, worldPos)
+        ) {
+    if(world == zfnull) {
+        pos = ZFUIPointZero();
+    }
+    else {
+        P2UIPointFromWorldT(
+                pos
+                , zfcast(ZFUIView *, world)->height()
+                , world->p2_UIScale()
+                , world->p2_UIOffset()
+                , worldPos
+                );
+    }
+}
+ZFMETHOD_FUNC_DEFINE_2(ZFUIPoint, P2UIPointFromWorld
+        , ZFMP_IN(P2World *, world)
+        , ZFMP_IN(const ZFUIPoint &, worldPos)
+        ) {
+    ZFUIPoint pos;
+    P2UIPointFromWorldT(
+            pos
+            , world
+            , worldPos
+            );
+    return pos;
+}
+
+ZFMETHOD_FUNC_DEFINE_3(void, P2UIPointToWorldT
+        , ZFMP_OUT(ZFUIPoint &, worldPos)
+        , ZFMP_IN(P2World *, world)
+        , ZFMP_IN(const ZFUIPoint &, pos)
+        ) {
+    if(world == zfnull) {
+        worldPos = ZFUIPointZero();
+    }
+    else {
+        P2UIPointToWorldT(
+                worldPos
+                , zfcast(ZFUIView *, world)->height()
+                , world->p2_UIScale()
+                , world->p2_UIOffset()
+                , pos
+                );
+    }
+}
+ZFMETHOD_FUNC_DEFINE_2(ZFUIPoint, P2UIPointToWorld
+        , ZFMP_IN(P2World *, world)
+        , ZFMP_IN(const ZFUIPoint &, pos)
+        ) {
+    ZFUIPoint worldPos;
+    P2UIPointToWorldT(
+            worldPos
+            , world
+            , pos
+            );
+    return worldPos;
+}
+
+ZFMETHOD_FUNC_DEFINE_5(void, P2UIPointFromWorldT
+        , ZFMP_OUT(ZFUIPoint &, pos)
+        , ZFMP_IN(zffloat, worldUIHeight)
+        , ZFMP_IN(zffloat, worldUIScale)
+        , ZFMP_IN(const ZFUIPoint &, worldUIOffset)
+        , ZFMP_IN(const ZFUIPoint &, worldPos)
+        ) {
+    pos.x = (worldPos.x + worldUIOffset.x) * worldUIScale;
+    pos.y = worldUIHeight - (worldPos.y + worldUIOffset.y) * worldUIScale;
+}
+ZFMETHOD_FUNC_DEFINE_4(ZFUIPoint, P2UIPointFromWorld
+        , ZFMP_IN(zffloat, worldUIHeight)
+        , ZFMP_IN(zffloat, worldUIScale)
+        , ZFMP_IN(const ZFUIPoint &, worldUIOffset)
+        , ZFMP_IN(const ZFUIPoint &, worldPos)
+        ) {
+    ZFUIPoint pos;
+    P2UIPointFromWorldT(
+            pos
+            , worldUIHeight
+            , worldUIScale
+            , worldUIOffset
+            , worldPos
+            );
+    return pos;
+}
+
+ZFMETHOD_FUNC_DEFINE_5(void, P2UIPointToWorldT
+        , ZFMP_OUT(ZFUIPoint &, worldPos)
+        , ZFMP_IN(zffloat, worldUIHeight)
+        , ZFMP_IN(zffloat, worldUIScale)
+        , ZFMP_IN(const ZFUIPoint &, worldUIOffset)
+        , ZFMP_IN(const ZFUIPoint &, pos)
+        ) {
+    worldPos.x = pos.x / worldUIScale - worldUIOffset.x;
+    worldPos.y = (worldUIHeight - pos.y) / worldUIScale - worldUIOffset.y;
+}
+ZFMETHOD_FUNC_DEFINE_4(ZFUIPoint, P2UIPointToWorld
+        , ZFMP_IN(zffloat, worldUIHeight)
+        , ZFMP_IN(zffloat, worldUIScale)
+        , ZFMP_IN(const ZFUIPoint &, worldUIOffset)
+        , ZFMP_IN(const ZFUIPoint &, pos)
+        ) {
+    ZFUIPoint worldPos;
+    P2UIPointToWorldT(
+            worldPos
+            , worldUIHeight
+            , worldUIScale
+            , worldUIOffset
+            , pos
+            );
+    return worldPos;
+}
+
+// ============================================================
+ZFMETHOD_FUNC_DEFINE_3(void, P2UIRectFromAABBT
         , ZFMP_OUT(ZFUIRect &, rect)
         , ZFMP_IN(P2World *, world)
         , ZFMP_IN(const ZFUIRect &, aabb)
         ) {
-    const ZFUIPoint &offset = world->p2_UIOffset();
-    zffloat scale = world->p2_UIScale();
-    zffloat height = zfcast(P2WorldView *, world)->height();
-    rect.width = aabb.width * scale;
-    rect.height = aabb.height * scale;
-    rect.x = (aabb.x + offset.x) * scale;
-    rect.y = height - (aabb.y + aabb.height + offset.y) * scale;
+    if(world == zfnull) {
+        rect = ZFUIRectZero();
+    }
+    else {
+        P2UIRectFromAABBT(
+                rect
+                , zfcast(ZFUIView *, world)->height()
+                , world->p2_UIScale()
+                , world->p2_UIOffset()
+                , aabb
+                );
+    }
 }
-ZFMETHOD_FUNC_DEFINE_2(ZFUIRect, P2AABBToRect
+ZFMETHOD_FUNC_DEFINE_2(ZFUIRect, P2UIRectFromAABB
         , ZFMP_IN(P2World *, world)
         , ZFMP_IN(const ZFUIRect &, aabb)
         ) {
     ZFUIRect rect;
-    P2AABBToRectT(
+    P2UIRectFromAABBT(
             rect
             , world
             , aabb
@@ -295,30 +459,93 @@ ZFMETHOD_FUNC_DEFINE_2(ZFUIRect, P2AABBToRect
     return rect;
 }
 
-ZFMETHOD_FUNC_DEFINE_3(void, P2AABBFromRectT
+ZFMETHOD_FUNC_DEFINE_3(void, P2UIRectToAABBT
         , ZFMP_OUT(ZFUIRect &, aabb)
         , ZFMP_IN(P2World *, world)
         , ZFMP_IN(const ZFUIRect &, rect)
         ) {
-    const ZFUIPoint &offset = world->p2_UIOffset();
-    zffloat scale = world->p2_UIScale();
-    zffloat height = zfcast(P2WorldView *, world)->height();
-    aabb.width = rect.width / scale;
-    aabb.height = rect.height / scale;
-    aabb.x = rect.x / scale - offset.x;
-    aabb.y = (height - (rect.y + rect.height)) / scale - offset.y;
+    if(world == zfnull) {
+        aabb = ZFUIRectZero();
+    }
+    else {
+        P2UIRectToAABBT(
+                aabb
+                , zfcast(ZFUIView *, world)->height()
+                , world->p2_UIScale()
+                , world->p2_UIOffset()
+                , rect
+                );
+    }
 }
-ZFMETHOD_FUNC_DEFINE_2(ZFUIRect, P2AABBFromRect
+ZFMETHOD_FUNC_DEFINE_2(ZFUIRect, P2UIRectToAABB
         , ZFMP_IN(P2World *, world)
         , ZFMP_IN(const ZFUIRect &, rect)
         ) {
     ZFUIRect aabb;
-    P2AABBFromRectT(
+    P2UIRectToAABBT(
             aabb
             , world
             , rect
             );
+    return aabb;
+}
+
+ZFMETHOD_FUNC_DEFINE_5(void, P2UIRectFromAABBT
+        , ZFMP_OUT(ZFUIRect &, rect)
+        , ZFMP_IN(zffloat, worldUIHeight)
+        , ZFMP_IN(zffloat, worldUIScale)
+        , ZFMP_IN(const ZFUIPoint &, worldUIOffset)
+        , ZFMP_IN(const ZFUIRect &, aabb)
+        ) {
+    rect.width = aabb.width * worldUIScale;
+    rect.height = aabb.height * worldUIScale;
+    rect.x = (aabb.x + worldUIOffset.x) * worldUIScale;
+    rect.y = worldUIHeight - (aabb.y + aabb.height + worldUIOffset.y) * worldUIScale;
+}
+ZFMETHOD_FUNC_DEFINE_4(ZFUIRect, P2UIRectFromAABB
+        , ZFMP_IN(zffloat, worldUIHeight)
+        , ZFMP_IN(zffloat, worldUIScale)
+        , ZFMP_IN(const ZFUIPoint &, worldUIOffset)
+        , ZFMP_IN(const ZFUIRect &, aabb)
+        ) {
+    ZFUIRect rect;
+    P2UIRectFromAABBT(
+            rect
+            , worldUIHeight
+            , worldUIScale
+            , worldUIOffset
+            , aabb
+            );
     return rect;
+}
+
+ZFMETHOD_FUNC_DEFINE_5(void, P2UIRectToAABBT
+        , ZFMP_OUT(ZFUIRect &, aabb)
+        , ZFMP_IN(zffloat, worldUIHeight)
+        , ZFMP_IN(zffloat, worldUIScale)
+        , ZFMP_IN(const ZFUIPoint &, worldUIOffset)
+        , ZFMP_IN(const ZFUIRect &, rect)
+        ) {
+    aabb.width = rect.width / worldUIScale;
+    aabb.height = rect.height / worldUIScale;
+    aabb.x = rect.x / worldUIScale - worldUIOffset.x;
+    aabb.y = (worldUIHeight - (rect.y + rect.height)) / worldUIScale - worldUIOffset.y;
+}
+ZFMETHOD_FUNC_DEFINE_4(ZFUIRect, P2UIRectToAABB
+        , ZFMP_IN(zffloat, worldUIHeight)
+        , ZFMP_IN(zffloat, worldUIScale)
+        , ZFMP_IN(const ZFUIPoint &, worldUIOffset)
+        , ZFMP_IN(const ZFUIRect &, rect)
+        ) {
+    ZFUIRect aabb;
+    P2UIRectToAABBT(
+            aabb
+            , worldUIHeight
+            , worldUIScale
+            , worldUIOffset
+            , rect
+            );
+    return aabb;
 }
 
 ZF_NAMESPACE_GLOBAL_END

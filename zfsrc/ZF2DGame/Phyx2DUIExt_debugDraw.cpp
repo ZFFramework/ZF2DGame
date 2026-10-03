@@ -1,6 +1,6 @@
 #include "Phyx2DUIExt.h"
-#include "../../zfsrc_ext/ZFImpl/_repo/box2d/box2d/box2d.h"
-#include <cmath>
+
+#include <cmath> // for coordinate conv
 
 ZF_NAMESPACE_GLOBAL_BEGIN
 
@@ -181,13 +181,13 @@ public:
         zffloat h = 2 / world->p2_UIScale();
         zffloat x = (pos0.x + pos1.x) / 2;
         zffloat y = (pos0.y + pos1.y) / 2;
-        v->viewFrame(P2AABBToRect(world, ZFUIRectCreate(
+        v->viewFrame(P2UIRectFromAABB(world, ZFUIRectCreate(
                         x - w / 2
                         , y - h / 2
                         , w
                         , h
                         )));
-        v->rotateZ(360 - atan2(pos1.y - pos0.y, pos1.x - pos0.x) * 180 / B2_PI);
+        v->rotateZ(360 - atan2(pos1.y - pos0.y, pos1.x - pos0.x) * 180 / P2_PI());
     }
     void jointDebugDetach(ZF_IN P2Joint *joint) {
         zfautoT<ZFUIView> v = joint->objectTagRemoveAndGet(zftext("_ZFP_P2DebugDraw_joint"));
@@ -232,6 +232,7 @@ static void _ZFP_P2DebugDrawAttach(ZF_IN P2WorldView *worldView, ZF_IN P2World *
         d = t;
         worldView->objectTag(zftext("_ZFP_P2DebugDraw_world"), d);
         worldView->internalFgView(d)->sizeFill();
+        d->viewUIEnableTree(zffalse);
     }
     world->observerAdd(P2World::E_P2BodyAttach(), ZFCallbackForFunc(_ZFP_I_P2DebugDraw::bodyOnAttach));
     world->observerAdd(P2World::E_P2BodyDetach(), ZFCallbackForFunc(_ZFP_I_P2DebugDraw::bodyOnDetach));
