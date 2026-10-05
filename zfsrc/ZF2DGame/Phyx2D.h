@@ -13,10 +13,6 @@ zfclassFwd P2Body;
 zfclassFwd P2Unit;
 zfclassFwd P2World;
 
-/** @brief the missing PI in math.h */
-inline zffloat P2_PI(void) {
-    return 3.14159265359f;
-}
 /** @brief a dummy value indicates largest value in physics world */
 inline zffloat P2_MAX(void) {
     return 999999;

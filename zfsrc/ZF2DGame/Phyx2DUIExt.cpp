@@ -1,7 +1,5 @@
 #include "Phyx2DUIExt.h"
 
-#include <cmath> // for coordinate conv
-
 ZF_NAMESPACE_GLOBAL_BEGIN
 
 ZFCLASS_EXTEND(P2WorldView, P2World)
@@ -73,8 +71,8 @@ public:
             }
         }
 
-        const ZFCoreArray<zfautoT<TileView> > &tilesBg = worldView->tileBg();
-        const ZFCoreArray<zfautoT<TileView> > &tilesFg = worldView->tileBg();
+        const ZFCoreArray<zfautoT<P2ScreenTileView> > &tilesBg = worldView->tileBg();
+        const ZFCoreArray<zfautoT<P2ScreenTileView> > &tilesFg = worldView->tileBg();
         if(!tilesBg.isEmpty() || !tilesFg.isEmpty()) {
             switch(this->tileUpdateMode) {
                 case TileUpdateByUI: {
@@ -130,29 +128,29 @@ private:
 
 ZFOBJECT_REGISTER(P2WorldView)
 
-ZFPROPERTY_ON_UPDATE_DEFINE(P2WorldView, ZFCoreArray<zfautoT<TileView> >, tileBg) {
+ZFPROPERTY_ON_UPDATE_DEFINE(P2WorldView, ZFCoreArray<zfautoT<P2ScreenTileView> >, tileBg) {
     for(zfindex i = propertyValueOld.count() - 1; i != zfindexMax(); --i) {
-        TileView *child = propertyValueOld[i];
+        P2ScreenTileView *child = propertyValueOld[i];
         if(child) {
             child->removeFromParent();
         }
     }
     for(zfindex i = propertyValue.count() - 1; i != zfindexMax(); --i) {
-        TileView *child = propertyValue[i];
+        P2ScreenTileView *child = propertyValue[i];
         if(child) {
             this->internalImplView(child, 0);
         }
     }
 }
-ZFPROPERTY_ON_UPDATE_DEFINE(P2WorldView, ZFCoreArray<zfautoT<TileView> >, tileFg) {
+ZFPROPERTY_ON_UPDATE_DEFINE(P2WorldView, ZFCoreArray<zfautoT<P2ScreenTileView> >, tileFg) {
     for(zfindex i = propertyValueOld.count() - 1; i != zfindexMax(); --i) {
-        TileView *child = propertyValueOld[i];
+        P2ScreenTileView *child = propertyValueOld[i];
         if(child) {
             child->removeFromParent();
         }
     }
     for(zfindex i = 0; i < propertyValue.count(); ++i) {
-        TileView *child = propertyValue[i];
+        P2ScreenTileView *child = propertyValue[i];
         if(child) {
             this->internalImplView(child);
         }
@@ -272,9 +270,9 @@ ZFMETHOD_FUNC_DEFINE_8(void, P2UIRectFromBodyT
         , ZFMP_IN_OPT(zffloat, rotation, 0)
         , ZFMP_IN_OPT(const ZFUIPoint &, centerOfMass, ZFUIPointZero())
         ) {
-    zffloat r = (zffloat)(rotation * P2_PI() / 180);
-    zffloat cr = cos(r);
-    zffloat sr = sin(r);
+    zffloat r = (zffloat)(rotation * zfm_PI() / 180);
+    zffloat cr = zfm_cos(r);
+    zffloat sr = zfm_sin(r);
     zffloat x = position.x + centerOfMass.x * cr + centerOfMass.y * sr - centerOfMass.x;
     zffloat y = position.y - centerOfMass.x * sr + centerOfMass.y * cr - centerOfMass.y;
     zffloat w = aabbLocal.width;

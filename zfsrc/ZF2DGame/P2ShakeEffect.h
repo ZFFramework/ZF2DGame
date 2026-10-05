@@ -1,10 +1,10 @@
 /**
- * @file ShakeEffect.h
+ * @file P2ShakeEffect.h
  * @brief effect animation util
  */
 
-#ifndef _ZFI_ShakeEffect_h_
-#define _ZFI_ShakeEffect_h_
+#ifndef _ZFI_P2ShakeEffect_h_
+#define _ZFI_P2ShakeEffect_h_
 
 #include "ZF2DGameDef.h"
 ZF_NAMESPACE_GLOBAL_BEGIN
@@ -12,8 +12,8 @@ ZF_NAMESPACE_GLOBAL_BEGIN
 /**
  * @brief effect animation util
  */
-zfclass ZFLIB_ZF2DGame ShakeEffect : zfextend ZFAniForTimer {
-    ZFOBJECT_DECLARE(ShakeEffect, ZFAniForTimer)
+zfclass ZFLIB_ZF2DGame P2ShakeEffect : zfextend ZFAniForTimer {
+    ZFOBJECT_DECLARE(P2ShakeEffect, ZFAniForTimer)
 
 public:
     /**
@@ -39,5 +39,5 @@ private:
 };
 
 ZF_NAMESPACE_GLOBAL_END
-#endif // #ifndef _ZFI_ShakeEffect_h_
+#endif // #ifndef _ZFI_P2ShakeEffect_h_
 

@@ -1,7 +1,5 @@
 #include "Phyx2DUIExt.h"
 
-#include <cmath> // for coordinate conv
-
 ZF_NAMESPACE_GLOBAL_BEGIN
 
 zfclass _ZFP_I_P2DebugDrawBody : zfextend ZFUIView {
@@ -177,7 +175,7 @@ public:
         }
         ZFUIPoint pos0 = ZFUIPointDec(joint->p2_ownerBody0()->p2_positionCur(), joint->p2_ownerBody0()->p2_centerOfMass());
         ZFUIPoint pos1 = ZFUIPointDec(joint->p2_ownerBody1()->p2_positionCur(), joint->p2_ownerBody1()->p2_centerOfMass());
-        zffloat w = (zffloat)sqrt(pow(pos1.x - pos0.x, 2) + pow(pos1.y - pos0.y, 2));
+        zffloat w = (zffloat)zfm_sqrt(zfm_pow(pos1.x - pos0.x, 2) + zfm_pow(pos1.y - pos0.y, 2));
         zffloat h = 2 / world->p2_UIScale();
         zffloat x = (pos0.x + pos1.x) / 2;
         zffloat y = (pos0.y + pos1.y) / 2;
@@ -187,7 +185,7 @@ public:
                         , w
                         , h
                         )));
-        v->rotateZ(360 - atan2(pos1.y - pos0.y, pos1.x - pos0.x) * 180 / P2_PI());
+        v->rotateZ(360 - zfm_atan2(pos1.y - pos0.y, pos1.x - pos0.x) * 180 / zfm_PI());
     }
     void jointDebugDetach(ZF_IN P2Joint *joint) {
         zfautoT<ZFUIView> v = joint->objectTagRemoveAndGet(zftext("_ZFP_P2DebugDraw_joint"));

@@ -7,7 +7,7 @@
 #define _ZFI_Phyx2DUIExt_h_
 
 #include "Phyx2D.h"
-#include "TileView.h"
+#include "P2ScreenTileView.h"
 ZF_NAMESPACE_GLOBAL_BEGIN
 
 zfclassFwd _ZFP_P2WorldViewPrivate;
@@ -62,6 +62,12 @@ public:
     ZFPROPERTY_ON_ATTACH_DECLARE(zfbool, debugMouse)
     ZFPROPERTY_ON_DETACH_DECLARE(zfbool, debugMouse)
 
+    /** @brief while moving in #debugMouse mode, try to align position with this value */
+    ZFPROPERTY_ASSIGN(zffloat, debugMousePositionAlign, 1)
+
+    /** @brief while rotating in #debugMouse mode, try to align rotation with this value */
+    ZFPROPERTY_ASSIGN(zffloat, debugMouseRotationAlign, 45)
+
     /**
      * @brief tiled bg automatically updated with #P2World::p2_UIOffset
      *
@@ -71,11 +77,11 @@ public:
      * and can be checked by:
      * #tileIsUpdateByUI / #tileIsUpdateBySpeed / #tileIsUpdateByOffset
      */
-    ZFPROPERTY_ASSIGN(ZFCoreArray<zfautoT<TileView> >, tileBg)
-    ZFPROPERTY_ON_UPDATE_DECLARE(ZFCoreArray<zfautoT<TileView> >, tileBg)
+    ZFPROPERTY_ASSIGN(ZFCoreArray<zfautoT<P2ScreenTileView> >, tileBg)
+    ZFPROPERTY_ON_UPDATE_DECLARE(ZFCoreArray<zfautoT<P2ScreenTileView> >, tileBg)
     /** @brief see #tileBg */
-    ZFPROPERTY_ASSIGN(ZFCoreArray<zfautoT<TileView> >, tileFg)
-    ZFPROPERTY_ON_UPDATE_DECLARE(ZFCoreArray<zfautoT<TileView> >, tileFg)
+    ZFPROPERTY_ASSIGN(ZFCoreArray<zfautoT<P2ScreenTileView> >, tileFg)
+    ZFPROPERTY_ON_UPDATE_DECLARE(ZFCoreArray<zfautoT<P2ScreenTileView> >, tileFg)
 
     /** @brief see #tileBg, make #tileBg and #tileFg auto update by #P2World::p2_UIOffset */
     ZFMETHOD_DECLARE_0(void, tileUpdateByUI)

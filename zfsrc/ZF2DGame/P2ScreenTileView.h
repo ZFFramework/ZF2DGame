@@ -1,10 +1,10 @@
 /**
- * @file TileView.h
+ * @file P2ScreenTileView.h
  * @brief tile view util
  */
 
-#ifndef _ZFI_TileView_h_
-#define _ZFI_TileView_h_
+#ifndef _ZFI_P2ScreenTileView_h_
+#define _ZFI_P2ScreenTileView_h_
 
 #include "ZF2DGameDef.h"
 ZF_NAMESPACE_GLOBAL_BEGIN
@@ -12,8 +12,8 @@ ZF_NAMESPACE_GLOBAL_BEGIN
 /**
  * @brief tile view
  */
-zfclass ZFLIB_ZF2DGame TileView : zfextend ZFUIDrawableView {
-    ZFOBJECT_DECLARE_WITH_CUSTOM_CTOR(TileView, ZFUIDrawableView)
+zfclass ZFLIB_ZF2DGame P2ScreenTileView : zfextend ZFUIDrawableView {
+    ZFOBJECT_DECLARE_WITH_CUSTOM_CTOR(P2ScreenTileView, ZFUIDrawableView)
 
 public:
     /** @brief the tile image */
@@ -52,10 +52,10 @@ private:
     ZFUIPoint _tileOffset;
 protected:
     /** @cond ZFPrivateDoc */
-    TileView(void) : _tileOffset(ZFUIPointZero()) {}
+    P2ScreenTileView(void) : _tileOffset(ZFUIPointZero()) {}
     /** @endcond */
 };
 
 ZF_NAMESPACE_GLOBAL_END
-#endif // #ifndef _ZFI_TileView_h_
+#endif // #ifndef _ZFI_P2ScreenTileView_h_
 

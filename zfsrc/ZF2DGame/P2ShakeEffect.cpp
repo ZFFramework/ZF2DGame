@@ -1,12 +1,10 @@
-#include "ShakeEffect.h"
-
-#include <cmath> // for sin and cos
+#include "P2ShakeEffect.h"
 
 ZF_NAMESPACE_GLOBAL_BEGIN
 
-ZFOBJECT_REGISTER(ShakeEffect)
+ZFOBJECT_REGISTER(P2ShakeEffect)
 
-void ShakeEffect::aniTimerOnUpdate(ZF_IN zffloat progress) {
+void P2ShakeEffect::aniTimerOnUpdate(ZF_IN zffloat progress) {
     zfsuper::aniTimerOnUpdate(progress);
     _positive = !_positive;
     ZFUIView *target = this->target();
@@ -24,11 +22,11 @@ void ShakeEffect::aniTimerOnUpdate(ZF_IN zffloat progress) {
     if(this->damping()) {
         offset *= (1 - progress);
     }
-    target->translateX(offset * cos(direction));
-    target->translateY(offset * sin(direction));
+    target->translateX(offset * zfm_sin(direction * zfm_PI() / 180));
+    target->translateY(-offset * zfm_cos(direction * zfm_PI() / 180));
 }
 
-void ShakeEffect::aniOnStop(ZF_IN ZFResultType resultType) {
+void P2ShakeEffect::aniOnStop(ZF_IN ZFResultType resultType) {
     ZFUIView *target = this->target();
     if(target) {
         target->translateX(0);

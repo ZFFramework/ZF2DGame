@@ -1,7 +1,5 @@
 #include "Phyx2DUIExt.h"
 
-#include <cmath> // for coordinate conv
-
 ZF_NAMESPACE_GLOBAL_BEGIN
 
 zfclass _ZFP_I_P2DebugMouseCtrl : zfextend ZFUIView {
@@ -48,6 +46,7 @@ public:
                 this->layoutParam(this->layoutParamCreate());
             }
             this->layoutParam()->margin(center.x - size / 2, center.y - size / 2, 0, 0);
+            this->viewSizeMin(ZFUISizeCreate(size));
         }
     }
 
@@ -275,6 +274,19 @@ private:
             _moveHelper->p2_removeFromParent();
             _moveHelper = zfnull;
         }
+        P2WorldView *worldView = zfcast(P2WorldView *, _target->p2_ownerWorld());
+        if(worldView && worldView->debugMousePositionAlign() > 0) {
+            ZFUIPoint t = _target->p2_positionCur();
+            if(ZFBitTest(_ctrl, _Ctrl_move_x)) {
+                _valueAlign(t.x, worldView->debugMousePositionAlign());
+            }
+            if(ZFBitTest(_ctrl, _Ctrl_move_y)) {
+                _valueAlign(t.y, worldView->debugMousePositionAlign());
+            }
+            if(t != _target->p2_positionCur()) {
+                _target->p2_position(t);
+            }
+        }
         _target->p2_positionVelocity(ZFUIPointZero());
     }
     void _moveCtrlUpdate(ZF_IN zffloat dx, ZF_IN zffloat dy) {
@@ -283,8 +295,23 @@ private:
         }
         P2World *world = _target->p2_ownerWorld();
         ZFUIPoint t = _moveValueBak;
-        t.x += dx / world->p2_UIScale();
-        t.y -= dy / world->p2_UIScale();
+        if(ZFBitTest(_ctrl, _Ctrl_move_x)) {
+            t.x += dx / world->p2_UIScale();
+        }
+        if(ZFBitTest(_ctrl, _Ctrl_move_y)) {
+            t.y -= dy / world->p2_UIScale();
+        }
+        {
+            P2WorldView *worldView = zfcast(P2WorldView *, world);
+            if(worldView && worldView->debugMousePositionAlign() > 0) {
+                if(ZFBitTest(_ctrl, _Ctrl_move_x)) {
+                    _valueAlign(t.x, worldView->debugMousePositionAlign());
+                }
+                if(ZFBitTest(_ctrl, _Ctrl_move_y)) {
+                    _valueAlign(t.y, worldView->debugMousePositionAlign());
+                }
+            }
+        }
         _moveCtrl->p2_position(t);
     }
 
@@ -293,6 +320,14 @@ private:
     }
     void _rotateCtrlDetach(void) {
         _rotateValueBak = P2_MAX();
+        P2WorldView *worldView = zfcast(P2WorldView *, _target->p2_ownerWorld());
+        if(worldView && worldView->debugMouseRotationAlign() > 0) {
+            zffloat t = _target->p2_rotationCur();
+            _valueAlign(t, worldView->debugMouseRotationAlign());
+            if(t != _target->p2_rotationCur()) {
+                _target->p2_rotation(t);
+            }
+        }
         _target->p2_rotationVelocity(0);
     }
     void _rotateCtrlUpdate(ZF_IN zffloat dx, ZF_IN zffloat dy) {
@@ -301,8 +336,36 @@ private:
         }
         zffloat ux = -dx, uy = -dy;
         zffloat vx = -_dx, vy = -_dy;
-        zffloat rot = -atan2(ux * vy - uy * vx, ux * vx + uy * vy) * 180 / P2_PI();
-        _target->p2_rotation(_rotateValueBak + rot);
+        zffloat rot = -zfm_atan2(ux * vy - uy * vx, ux * vx + uy * vy) * 180 / zfm_PI();
+        zffloat t = _rotateValueBak + rot;
+        {
+            P2WorldView *worldView = zfcast(P2WorldView *, _target->p2_ownerWorld());
+            if(worldView && worldView->debugMouseRotationAlign() > 0) {
+                _valueAlign(t, worldView->debugMouseRotationAlign());
+            }
+        }
+        _target->p2_rotation(t);
+    }
+
+    void _valueAlign(ZF_IN_OUT zffloat &v, ZF_IN zffloat align) {
+        zffloat t = zfm_fmod(v, align);
+        zffloat d = align / 5;
+        if(t >= 0) {
+            if(t <= d) {
+                v -= t;
+            }
+            else if(t >= align - d) {
+                v += align - t;
+            }
+        }
+        else {
+            if(t >= -d) {
+                v -= t;
+            }
+            else if(t <= -(align - d)) {
+                v += align + t;
+            }
+        }
     }
 
 protected:
@@ -315,6 +378,9 @@ protected:
     virtual void objectOnDeallocPrepare(void) {
         this->target(zfnull);
         zfsuper::objectOnDeallocPrepare();
+    }
+    virtual void viewFrame(ZF_IN const ZFUIRect &v) {
+        zfsuper::viewFrame(v); // zfzfzf
     }
     zfoverride
     virtual void layoutOnMeasure(

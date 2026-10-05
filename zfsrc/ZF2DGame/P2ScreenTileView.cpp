@@ -1,30 +1,28 @@
-#include "TileView.h"
-
-#include <cmath> // for fmodf
+#include "P2ScreenTileView.h"
 
 ZF_NAMESPACE_GLOBAL_BEGIN
 
-ZFOBJECT_REGISTER(TileView)
+ZFOBJECT_REGISTER(P2ScreenTileView)
 
-ZFPROPERTY_ON_UPDATE_DEFINE(TileView, zfanyT<ZFUIImage>, tile) {
+ZFPROPERTY_ON_UPDATE_DEFINE(P2ScreenTileView, zfanyT<ZFUIImage>, tile) {
     if(propertyValue != propertyValueOld) {
         this->drawRequest();
     }
 }
-ZFPROPERTY_ON_UPDATE_DEFINE(TileView, ZFUISize, tileScale) {
+ZFPROPERTY_ON_UPDATE_DEFINE(P2ScreenTileView, ZFUISize, tileScale) {
     if(propertyValue != propertyValueOld) {
         this->drawRequest();
     }
 }
-ZFPROPERTY_ON_UPDATE_DEFINE(TileView, ZFUISize, tileSpace) {
+ZFPROPERTY_ON_UPDATE_DEFINE(P2ScreenTileView, ZFUISize, tileSpace) {
     if(propertyValue != propertyValueOld) {
         this->drawRequest();
     }
 }
-ZFMETHOD_DEFINE_0(TileView, const ZFUIPoint &, tileOffset) {
+ZFMETHOD_DEFINE_0(P2ScreenTileView, const ZFUIPoint &, tileOffset) {
     return _tileOffset;
 }
-ZFMETHOD_DEFINE_1(TileView, void, tileOffset
+ZFMETHOD_DEFINE_1(P2ScreenTileView, void, tileOffset
         , ZFMP_IN(const ZFUIPoint &, v)
         ) {
     if(_tileOffset != v) {
@@ -32,14 +30,14 @@ ZFMETHOD_DEFINE_1(TileView, void, tileOffset
         this->drawRequest();
     }
 }
-ZFMETHOD_DEFINE_2(TileView, void, tileOffsetStep
+ZFMETHOD_DEFINE_2(P2ScreenTileView, void, tileOffsetStep
         , ZFMP_IN(zffloat, x)
         , ZFMP_IN(zffloat, y)
         ) {
     this->tileOffset(ZFUIPointCreate(_tileOffset.x + x, _tileOffset.y + y));
 }
 
-void TileView::onDraw(void) {
+void P2ScreenTileView::onDraw(void) {
     zfsuper::onDraw();
     zfautoT<ZFUIImage> tile = this->tile();
     if(tile) {
@@ -85,11 +83,11 @@ void TileView::onDraw(void) {
         }
     }
     ZFUIPoint tileOffset = this->tileOffset();
-    tileOffset.x = fmodf(tileOffset.x * this->tileOffsetScale().width, viewFrame.width);
+    tileOffset.x = zfm_fmod(tileOffset.x * this->tileOffsetScale().width, viewFrame.width);
     if(tileOffset.x > this->tileSpace().width) {
         tileOffset.x -= tileRect.width + this->tileSpace().width;
     }
-    tileOffset.y = fmodf(tileOffset.y * this->tileOffsetScale().height, viewFrame.height);
+    tileOffset.y = zfm_fmod(tileOffset.y * this->tileOffsetScale().height, viewFrame.height);
     if(tileOffset.y > this->tileSpace().height) {
         tileOffset.y -= tileRect.height + this->tileSpace().height;
     }

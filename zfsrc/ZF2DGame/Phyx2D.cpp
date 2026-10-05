@@ -1,11 +1,9 @@
 #include "Phyx2D.h"
 #include "../../zfsrc_ext/ZFImpl/_repo/box2d/box2d/box2d.h"
 #include "ZFCore/ZFSTLWrapper/zfstlhashmap.h"
-#include <cmath> // for fmodf
 
 ZF_NAMESPACE_GLOBAL_BEGIN
 
-ZFMETHOD_FUNC_USER_REGISTER_FOR_FUNC_0(zffloat, P2_PI)
 ZFMETHOD_FUNC_USER_REGISTER_FOR_FUNC_0(zffloat, P2_MAX)
 
 ZF_STATIC_REGISTER_INIT(P2EnvSetup) {
@@ -34,10 +32,10 @@ static b2Vec2 b2Vec2FromZF(ZF_IN const ZFUIPoint &v) {
     return ret;
 }
 static zffloat b2RadianNormalize(ZF_IN zffloat v) {
-    if(v < 0 || v >= P2_PI() * 2) {
-        v = fmodf(fmodf(v, P2_PI() * 2) + P2_PI() * 2, P2_PI() * 2);
+    if(v < 0 || v >= zfm_PI() * 2) {
+        v = zfm_fmod(zfm_fmod(v, zfm_PI() * 2) + zfm_PI() * 2, zfm_PI() * 2);
     }
-    if(zfmAbs(v) <= P2_PI() / 180 / 5) {
+    if(zfmAbs(v) <= zfm_PI() / 180 / 5) {
         return 0;
     }
     else {
@@ -46,7 +44,7 @@ static zffloat b2RadianNormalize(ZF_IN zffloat v) {
 }
 static zffloat b2DegreeNormalize(ZF_IN zffloat v) {
     if(v < 0 || v >= 360.0f) {
-        v = fmodf(fmodf(v, 360.0f) + 360.0f, 360.0f);
+        v = zfm_fmod(zfm_fmod(v, 360.0f) + 360.0f, 360.0f);
     }
     if(zfmAbs(v) <= 1 / 5) {
         return 0;
@@ -56,22 +54,22 @@ static zffloat b2DegreeNormalize(ZF_IN zffloat v) {
     }
 }
 static zffloat b2RotToZF(ZF_IN const b2Rot &v) {
-    return b2DegreeNormalize(0.0f - (atan2(v.s, v.c) * 180 / P2_PI()));
+    return b2DegreeNormalize(0.0f - (zfm_atan2(v.s, v.c) * 180 / zfm_PI()));
 }
 static b2Rot b2RotFromZF(ZF_IN zffloat v) {
-    return b2MakeRot(b2RadianNormalize((0.0f - v) * P2_PI() / 180));
+    return b2MakeRot(b2RadianNormalize((0.0f - v) * zfm_PI() / 180));
 }
 static zffloat b2RadToZF(ZF_IN float v) {
-    return 0.0f - (v * 180 / P2_PI());
+    return 0.0f - (v * 180 / zfm_PI());
 }
 static float b2RadFromZF(ZF_IN zffloat v) {
-    return (0.0f - v) * P2_PI() / 180;
+    return (0.0f - v) * zfm_PI() / 180;
 }
 static zffloat b2AngularVelocityToZF(ZF_IN float v) {
-    return 0.0f - (v * 180 / P2_PI());
+    return 0.0f - (v * 180 / zfm_PI());
 }
 static float b2AngularVelocityFromZF(ZF_IN zffloat v) {
-    return 0.0f - v * P2_PI() / 180;
+    return 0.0f - v * zfm_PI() / 180;
 }
 static b2Transform b2TransformFromZF(ZF_IN const ZFUIPoint &position, ZF_IN zffloat rotation) {
     b2Transform ret;
