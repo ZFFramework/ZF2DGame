@@ -172,6 +172,17 @@ public:
         ZFBitSet(stateFlag, stateFlag_massUpdateRequested);
     }
 public:
+    static void updatePreSolveCfg(ZF_IN P2Body *body, ZF_IN zfbool enable) {
+        if(body) {
+            for(zfindex i = body->p2_shapeCount() - 1; i != zfindexMax(); --i) {
+                P2Shape *shape = body->p2_shapeAt(i);
+                if(B2_IS_NON_NULL(shape->_ZFP_P2Shape_d->implShapeId)) {
+                    b2Shape_EnablePreSolveEvents(shape->_ZFP_P2Shape_d->implShapeId, enable);
+                }
+            }
+        }
+    }
+public:
     ZFUIRect bodyAABBLocal(void) {
         P2Body *body = (P2Body *)b2Body_GetUserData(this->implBodyId);
         ZFCoreAssert(body);
@@ -238,9 +249,10 @@ public:
         stateFlag_E_P2SensorExit = 1 << 3,
         stateFlag_E_P2SensorVisitorEnter = 1 << 4,
         stateFlag_E_P2SensorVisitorExit = 1 << 5,
-        stateFlag_E_P2ContactEnter = 1 << 6,
-        stateFlag_E_P2ContactExit = 1 << 7,
-        stateFlag_E_P2Update = 1 << 8,
+        stateFlag_E_P2ContactFilter = 1 << 6,
+        stateFlag_E_P2ContactEnter = 1 << 7,
+        stateFlag_E_P2ContactExit = 1 << 8,
+        stateFlag_E_P2Update = 1 << 9,
     };
     zfuint stateFlag;
 
@@ -372,6 +384,15 @@ void P2Unit::observerOnAdd(ZF_IN zfidentity eventId) {
     else if(eventId == P2Unit::E_P2ContactEnter()) {ZFBitSet(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2ContactEnter);}
     else if(eventId == P2Unit::E_P2ContactExit()) {ZFBitSet(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2ContactExit);}
 
+    else if(eventId == P2Unit::E_P2ContactFilter()) {
+        ZFBitSet(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2ContactFilter);
+        if(_ZFP_P2Unit_d->ownerWorld) {
+            _ZFP_P2BodyPrivate::updatePreSolveCfg(this->p2_body(), zftrue);
+            for(zfindex i = this->p2_partCount() - 1; i != zfindexMax(); --i) {
+                _ZFP_P2BodyPrivate::updatePreSolveCfg(this->p2_partAt(i), zftrue);
+            }
+        }
+    }
     else if(eventId == P2Unit::E_P2Update()) {
         ZFBitSet(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2Update);
         if(_ZFP_P2Unit_d->ownerWorld) {
@@ -390,6 +411,15 @@ void P2Unit::observerOnRemove(ZF_IN zfidentity eventId) {
     else if(eventId == P2Unit::E_P2ContactEnter()) {ZFBitUnset(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2ContactEnter);}
     else if(eventId == P2Unit::E_P2ContactExit()) {ZFBitUnset(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2ContactExit);}
 
+    else if(eventId == P2Unit::E_P2ContactFilter()) {
+        ZFBitUnset(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2ContactFilter);
+        if(_ZFP_P2Unit_d->ownerWorld) {
+            _ZFP_P2BodyPrivate::updatePreSolveCfg(this->p2_body(), zffalse);
+            for(zfindex i = this->p2_partCount() - 1; i != zfindexMax(); --i) {
+                _ZFP_P2BodyPrivate::updatePreSolveCfg(this->p2_partAt(i), zffalse);
+            }
+        }
+    }
     else if(eventId == P2Unit::E_P2Update()) {
         ZFBitUnset(_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2Update);
         if(_ZFP_P2Unit_d->ownerWorld) {
@@ -402,6 +432,7 @@ ZFEVENT_REGISTER(P2Unit, P2SensorEnter)
 ZFEVENT_REGISTER(P2Unit, P2SensorExit)
 ZFEVENT_REGISTER(P2Unit, P2SensorVisitorEnter)
 ZFEVENT_REGISTER(P2Unit, P2SensorVisitorExit)
+ZFEVENT_REGISTER(P2Unit, P2ContactFilter)
 ZFEVENT_REGISTER(P2Unit, P2ContactEnter)
 ZFEVENT_REGISTER(P2Unit, P2ContactExit)
 ZFEVENT_REGISTER(P2Unit, P2Update)
@@ -643,6 +674,9 @@ static void _ZFP_P2Shape_implShapeDef(ZF_IN_OUT b2ShapeDef &cfg, ZF_IN P2Shape *
     cfg.isSensor = owner->p2_sensor();
     cfg.enableSensorEvents = owner->p2_sensorEnable();
     cfg.enableContactEvents = owner->p2_contactEnable();
+    if(ZFBitTest(ownerBody->_ZFP_P2Body_d->ownerUnit->_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2ContactFilter)) {
+        cfg.enablePreSolveEvents = zftrue;
+    }
     cfg.invokeContactCreation = zffalse;
     cfg.updateBodyMass = zffalse;
 }
@@ -2382,13 +2416,20 @@ ZFMETHOD_USER_REGISTER_FOR_ZFOBJECT_VAR_READONLY(P2SensorEvent, ZFCoreArray<P2Se
 ZFTYPEID_ACCESS_ONLY_DEFINE_UNCOMPARABLE(P2ContactEventData, P2ContactEventData)
 ZFOUTPUT_TYPE_DEFINE(P2ContactEventData, {
     zfstringAppend(s
-            , "<Contact %s %s>"
+            , "<Contact %s %s %s %s>"
             , v.p2_shape0
             , v.p2_shape1
+            , v.p2_normal
+            , v.p2_contactEnable
             );
 })
 ZFMETHOD_USER_REGISTER_FOR_WRAPPER_VAR_READONLY(v_P2ContactEventData, P2Shape *, p2_shape0)
 ZFMETHOD_USER_REGISTER_FOR_WRAPPER_VAR_READONLY(v_P2ContactEventData, P2Shape *, p2_shape1)
+ZFMETHOD_USER_REGISTER_FOR_WRAPPER_VAR_READONLY(v_P2ContactEventData, ZFUIPoint, p2_normal)
+ZFMETHOD_USER_REGISTER_FOR_WRAPPER_VAR(v_P2ContactEventData, zfbool, p2_contactEnable)
+static void _ZFP_P2ContactEventDataFromManifold(ZF_IN_OUT P2ContactEventData &v, ZF_IN const b2Manifold &t) {
+    v.p2_normal = b2Vec2ToZF(t.normal);
+}
 
 ZFOBJECT_REGISTER(P2ContactEvent)
 ZFMETHOD_USER_REGISTER_FOR_ZFOBJECT_VAR_READONLY(P2ContactEvent, ZFCoreArray<P2ContactEventData>, p2_contactEnterList)
@@ -2718,6 +2759,36 @@ ZFMETHOD_DEFINE_5(P2World, zfauto, p2_rayTest
     return context.zfargs.result();
 }
 
+static bool _ZFP_P2World_PreSolve(b2ShapeId shapeIdA, b2ShapeId shapeIdB, b2Manifold *manifold, void *context) {
+    P2Shape *shapeA = (P2Shape *)b2Shape_GetUserData(shapeIdA);
+    P2Shape *shapeB = (P2Shape *)b2Shape_GetUserData(shapeIdB);
+    P2Unit *unitA = shapeA ? shapeA->p2_ownerUnit() : zfnull;
+    P2Unit *unitB = shapeB ? shapeB->p2_ownerUnit() : zfnull;
+    if(zffalse
+            || (unitA && ZFBitTest(unitA->_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2ContactFilter))
+            || (unitB && ZFBitTest(unitB->_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2ContactFilter))
+            ) {
+        zfobj<v_P2ContactEventData> eventData;
+        eventData->zfv.p2_shape0 = shapeA;
+        eventData->zfv.p2_shape1 = shapeB;
+        eventData->zfv.p2_contactEnable = zftrue;
+        _ZFP_P2ContactEventDataFromManifold(eventData->zfv, *manifold);
+        if(unitA && ZFBitTest(unitA->_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2ContactFilter)) {
+            unitA->observerNotify(P2Unit::E_P2ContactFilter(), ZFArgs()
+                    .param0(unitB)
+                    .param1(eventData)
+                    );
+        }
+        if(unitB && ZFBitTest(unitB->_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2ContactFilter)) {
+            unitB->observerNotify(P2Unit::E_P2ContactFilter(), ZFArgs()
+                    .param0(unitA)
+                    .param1(eventData)
+                    );
+        }
+        return eventData->zfv.p2_contactEnable;
+    }
+    return zftrue;
+}
 void P2World::objectOnInit(void) {
     zfsuper::objectOnInit();
     _ZFP_P2World_d = zfpoolNew(_ZFP_P2WorldPrivate);
@@ -2728,6 +2799,7 @@ void P2World::objectOnInit(void) {
     implWorldDef.enableSleep = zftrue;
     implWorldDef.enableContinuous = zftrue;
     _ZFP_P2World_d->implWorldId = b2CreateWorld(&implWorldDef);
+    b2World_SetPreSolveCallback(_ZFP_P2World_d->implWorldId, _ZFP_P2World_PreSolve, zfnull);
 
     zfclassNotPOD _Impl {
     public:
@@ -2990,6 +3062,7 @@ static void _ZFP_P2UnitAttach(ZF_IN P2World *ownerWorld, ZF_IN P2Unit *unit) {
 static void _ZFP_P2UnitDetach(ZF_IN P2Unit *unit) {
     if(unit->_ZFP_P2Unit_d->ownerWorld) {
         unit->_ZFP_P2Unit_d->ownerWorld->_ZFP_P2World_d->customUpdateUnits.erase(unit);
+
         if(ZFBitTest(unit->_ZFP_P2Unit_d->ownerWorld->_ZFP_P2World_d->stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2UnitDetach)
                 || ZFBitTest(_ZFP_P2World_stateFlag, _ZFP_P2WorldPrivate::stateFlag_E_P2UnitDetach)
                 ) {
@@ -3287,6 +3360,7 @@ static void _ZFP_P2WorldImplUpdate_events(ZF_IN P2World *world) {
                 P2ContactEventData &dst = eventList[j++];
                 dst.p2_shape0 = (P2Shape *)b2Shape_GetUserData(src.shapeIdA);
                 dst.p2_shape1 = (P2Shape *)b2Shape_GetUserData(src.shapeIdB);
+                _ZFP_P2ContactEventDataFromManifold(dst, src.manifold);
                 if(dst.p2_shape0 && dst.p2_shape1) {
                     P2Unit *unit0 = dst.p2_shape0->p2_ownerUnit();
                     P2Unit *unit1 = dst.p2_shape1->p2_ownerUnit();
@@ -3296,6 +3370,7 @@ static void _ZFP_P2WorldImplUpdate_events(ZF_IN P2World *world) {
                                 ) {
                             unit0->observerNotify(P2Unit::E_P2ContactEnter(), ZFArgs()
                                     .param0(unit1)
+                                    .param1(zfobj<v_P2ContactEventData>(dst))
                                     );
                         }
                         if(ZFBitTest(unit1->_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2ContactEnter)
@@ -3303,6 +3378,7 @@ static void _ZFP_P2WorldImplUpdate_events(ZF_IN P2World *world) {
                                 ) {
                             unit1->observerNotify(P2Unit::E_P2ContactEnter(), ZFArgs()
                                     .param0(unit0)
+                                    .param1(zfobj<v_P2ContactEventData>(dst))
                                     );
                         }
                     }
@@ -3319,8 +3395,11 @@ static void _ZFP_P2WorldImplUpdate_events(ZF_IN P2World *world) {
                     continue;
                 }
                 P2ContactEventData &dst = eventList[j++];
+                zfmemset(&dst, 0, sizeof(dst));
                 dst.p2_shape0 = (P2Shape *)b2Shape_GetUserData(src.shapeIdA);
                 dst.p2_shape1 = (P2Shape *)b2Shape_GetUserData(src.shapeIdB);
+                dst.p2_normal = ZFUIPointZero();
+                dst.p2_contactEnable = true;
                 if(dst.p2_shape0 && dst.p2_shape1) {
                     P2Unit *unit0 = dst.p2_shape0->p2_ownerUnit();
                     P2Unit *unit1 = dst.p2_shape1->p2_ownerUnit();
@@ -3330,6 +3409,7 @@ static void _ZFP_P2WorldImplUpdate_events(ZF_IN P2World *world) {
                                 ) {
                             unit0->observerNotify(P2Unit::E_P2ContactExit(), ZFArgs()
                                     .param0(unit1)
+                                    .param1(zfobj<v_P2ContactEventData>(dst))
                                     );
                         }
                         if(ZFBitTest(unit1->_ZFP_P2Unit_d->stateFlag, _ZFP_P2UnitPrivate::stateFlag_E_P2ContactExit)
@@ -3337,6 +3417,7 @@ static void _ZFP_P2WorldImplUpdate_events(ZF_IN P2World *world) {
                                 ) {
                             unit1->observerNotify(P2Unit::E_P2ContactExit(), ZFArgs()
                                     .param0(unit0)
+                                    .param1(zfobj<v_P2ContactEventData>(dst))
                                     );
                         }
                     }

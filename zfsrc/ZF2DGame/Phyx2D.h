@@ -788,15 +788,25 @@ public:
     /**
      * @brief see #ZFObject::observerNotify
      *
+     * called before contact, to filter and prevent further contact,
+     * param0 is the other #P2Unit,
+     * param1 is the #P2ContactEventData
+     */
+    ZFEVENT(P2ContactFilter)
+    /**
+     * @brief see #ZFObject::observerNotify
+     *
      * called when any child shape of this unit got #P2ContactEvent::p2_contactEnterList\n
-     * param0 is the other #P2Unit
+     * param0 is the other #P2Unit,
+     * param1 is the #P2ContactEventData
      */
     ZFEVENT(P2ContactEnter)
     /**
      * @brief see #ZFObject::observerNotify
      *
      * called when any child shape of this unit got #P2ContactEvent::p2_contactExitList\n
-     * param0 is the other #P2Unit
+     * param0 is the other #P2Unit,
+     * param1 is the #P2ContactEventData
      */
     ZFEVENT(P2ContactExit)
 
@@ -980,6 +990,20 @@ public:
     P2Shape *p2_shape0;
     /** @brief the shape */
     P2Shape *p2_shape1;
+
+    /**
+     * @brief contact normal vector from p2_shape0 to p2_shape1
+     *
+     * for #P2ContactEvent::p2_contactEnterList and #P2Unit::E_P2ContactFilter only
+     */
+    ZFUIPoint p2_normal;
+
+    /**
+     * @brief whether enable contact, true by default
+     *
+     * for #P2Unit::E_P2ContactFilter only
+     */
+    zfbool p2_contactEnable;
 };
 ZFTYPEID_ACCESS_ONLY_DECLARE(ZFLIB_ZF2DGame, P2ContactEventData, P2ContactEventData)
 ZFTYPEID_ACCESS_ONLY_REG(ZFLIB_ZF2DGame, P2ContactEventData, P2ContactEventData)
