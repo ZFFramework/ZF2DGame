@@ -17,8 +17,8 @@ zfclass ZFLIB_ZF2DGame P2ScreenTileView : zfextend ZFUIDrawableView {
 
 public:
     /** @brief the tile image */
-    ZFPROPERTY_RETAIN(zfanyT<ZFUIImage>, tile)
-    ZFPROPERTY_ON_UPDATE_DECLARE(zfanyT<ZFUIImage>, tile)
+    ZFPROPERTY_RETAIN(zfanyT<ZFUIImage>, tileImage)
+    ZFPROPERTY_ON_UPDATE_DECLARE(zfanyT<ZFUIImage>, tileImage)
 
     /** @brief tile scale, 0 means scale to fill the view, <0 means scale and keep aspect ratio */
     ZFPROPERTY_ASSIGN(ZFUISize, tileScale, ZFUISizeCreate(1))
@@ -44,7 +44,7 @@ public:
             , ZFMP_IN(zffloat, y)
             )
 
-public:
+protected:
     zfoverride
     virtual void onDraw(void);
 

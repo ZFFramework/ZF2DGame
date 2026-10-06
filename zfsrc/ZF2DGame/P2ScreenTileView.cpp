@@ -4,7 +4,7 @@ ZF_NAMESPACE_GLOBAL_BEGIN
 
 ZFOBJECT_REGISTER(P2ScreenTileView)
 
-ZFPROPERTY_ON_UPDATE_DEFINE(P2ScreenTileView, zfanyT<ZFUIImage>, tile) {
+ZFPROPERTY_ON_UPDATE_DEFINE(P2ScreenTileView, zfanyT<ZFUIImage>, tileImage) {
     if(propertyValue != propertyValueOld) {
         this->drawRequest();
     }
@@ -39,7 +39,7 @@ ZFMETHOD_DEFINE_2(P2ScreenTileView, void, tileOffsetStep
 
 void P2ScreenTileView::onDraw(void) {
     zfsuper::onDraw();
-    zfautoT<ZFUIImage> tile = this->tile();
+    zfautoT<ZFUIImage> tile = this->tileImage();
     if(tile) {
         tile = tile->imageState();
     }

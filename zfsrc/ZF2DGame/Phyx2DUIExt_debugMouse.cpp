@@ -379,9 +379,6 @@ protected:
         this->target(zfnull);
         zfsuper::objectOnDeallocPrepare();
     }
-    virtual void viewFrame(ZF_IN const ZFUIRect &v) {
-        zfsuper::viewFrame(v); // zfzfzf
-    }
     zfoverride
     virtual void layoutOnMeasure(
             ZF_OUT ZFUISize &ret

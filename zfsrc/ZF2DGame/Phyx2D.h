@@ -800,6 +800,13 @@ public:
      */
     ZFEVENT(P2ContactExit)
 
+    /**
+     * @brief see #ZFObject::observerNotify
+     *
+     * called during each simulation step, take care of performance
+     */
+    ZFEVENT(P2Update)
+
 public:
     /** @brief see #P2World */
     ZFMETHOD_DECLARE_0(P2World *, p2_ownerWorld)
@@ -1090,13 +1097,13 @@ public:
      *
      * called before each simulation step
      */
-    ZFEVENT(P2StepPrev)
+    ZFEVENT(P2UpdatePrev)
     /**
      * @brief see #ZFObject::observerNotify
      *
      * called before each simulation step
      */
-    ZFEVENT(P2StepPost)
+    ZFEVENT(P2UpdatePost)
     /**
      * @brief see #ZFObject::observerNotify
      *
@@ -1187,7 +1194,7 @@ public:
     /** @brief see #P2World */
     ZFMETHOD_DECLARE_0(zfbool, p2_started)
     /** @brief see #P2World */
-    ZFMETHOD_DECLARE_0(void, p2_manualStep)
+    ZFMETHOD_DECLARE_0(void, p2_manualUpdate)
 
 public:
     /** @brief see #P2World, must not manually modify */
