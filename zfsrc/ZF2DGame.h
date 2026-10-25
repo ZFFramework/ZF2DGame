@@ -8,6 +8,7 @@
 
 #include "ZF2DGame/P2ScreenTileView.h"
 #include "ZF2DGame/P2ShakeEffect.h"
+#include "ZF2DGame/P2TileView.h"
 #include "ZF2DGame/Phyx2D.h"
 #include "ZF2DGame/Phyx2DUIExt.h"
 #include "ZF2DGame/ZF2DGameDef.h"

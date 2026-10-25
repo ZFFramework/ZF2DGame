@@ -152,12 +152,13 @@ public:
     b2BodyId implBodyId;
     P2Unit *ownerUnit;
     zfobj<ZFArray> bodyRefJointList;
-    ZFUISize bodySize; // bodySize.width==-1 if needs update
-    ZFUIPoint centerOfMass; // bodySize.width==-1 if needs update, relative to bodySize
+    ZFUIRect bodyAABBLocal; // relative to origin point of body
+    ZFUIPoint centerOfMass; // relative to origin point of body
 
     enum {
-        stateFlag_unitScaleUpdateRequested = 1 << 0,
-        stateFlag_massUpdateRequested = 1 << 1,
+        stateFlag_bodyPosUpdateRequested = 1 << 0,
+        stateFlag_unitScaleUpdateRequested = 1 << 1,
+        stateFlag_massUpdateRequested = 1 << 2,
     };
     zfuint stateFlag;
 
@@ -166,10 +167,12 @@ public:
     : implBodyId(b2_nullBodyId)
     , ownerUnit(zfnull)
     , bodyRefJointList()
-    , bodySize(ZFUISizeInvalid())
     , centerOfMass()
     {
-        ZFBitSet(stateFlag, stateFlag_massUpdateRequested);
+        ZFBitSet(stateFlag, 0
+                | stateFlag_bodyPosUpdateRequested
+                | stateFlag_massUpdateRequested
+                );
     }
 public:
     static void updatePreSolveCfg(ZF_IN P2Body *body, ZF_IN zfbool enable) {
@@ -183,42 +186,22 @@ public:
         }
     }
 public:
-    ZFUIRect bodyAABBLocal(void) {
-        P2Body *body = (P2Body *)b2Body_GetUserData(this->implBodyId);
-        ZFCoreAssert(body);
-        ZFUIRect ret = ZFUIRectZero();
-        for(zfindex i = body->p2_shapeCount() - 1; i != zfindexMax(); --i) {
-            ZFUIRect shapeAABB = _ZFP_P2ShapePrivate::shapeAABBLocal(body->p2_shapeAt(i));
-            ret = ZFUIRectUnion(ret, shapeAABB);
-        }
-        return ret;
-    }
     void bodyPosUpdate(void) {
+        ZFBitUnset(this->stateFlag, stateFlag_bodyPosUpdateRequested);
         if(B2_IS_NULL(this->implBodyId)) {
-            this->bodySize = ZFUISizeZero();
+            this->bodyAABBLocal = ZFUIRectZero();
             this->centerOfMass = ZFUIPointZero();
         }
         else {
-            ZFUIRect bodyAABBLocal = this->bodyAABBLocal();
-            zffloat left = bodyAABBLocal.x;
-            zffloat top = bodyAABBLocal.y;
-            zffloat right = bodyAABBLocal.x + bodyAABBLocal.width;
-            zffloat bottom = bodyAABBLocal.y + bodyAABBLocal.height;
-            if(0 - left > right) {
-                right = 0 - left;
+            {
+                P2Body *body = (P2Body *)b2Body_GetUserData(this->implBodyId);
+                ZFCoreAssert(body);
+                bodyAABBLocal = ZFUIRectZero();
+                for(zfindex i = body->p2_shapeCount() - 1; i != zfindexMax(); --i) {
+                    ZFUIRect shapeAABB = _ZFP_P2ShapePrivate::shapeAABBLocal(body->p2_shapeAt(i));
+                    bodyAABBLocal = ZFUIRectUnion(bodyAABBLocal, shapeAABB);
+                }
             }
-            else {
-                left = 0 - right;
-            }
-            if(0 - top > bottom) {
-                bottom = 0 - top;
-            }
-            else {
-                top = 0 - bottom;
-            }
-
-            this->bodySize.width = right - left;
-            this->bodySize.height = bottom - top;
 
             this->centerOfMass = ZFUIPointApplyScaleReversely(
                     b2Vec2ToZF(b2Body_GetLocalCenterOfMass(this->implBodyId))
@@ -271,6 +254,7 @@ public:
     ZFListener implTimer;
     zfimplhashmap<P2Body *, zfbool> pendingBody; // bodies needs to create or update mass
     zfimplhashmap<P2Joint *, zfbool> pendingJoint; // joints needs to create or update body
+    zfimplhashmap<P2Body *, zfbool> pendingBodyMove;
     P2BodyMoveEvent *bodyMoveEvent;
     P2SensorEvent *sensorEvent;
     P2ContactEvent *contactEvent;
@@ -315,6 +299,7 @@ public:
     , implTimer()
     , pendingBody()
     , pendingJoint()
+    , pendingBodyMove()
     , bodyMoveEvent(zfobjAlloc(P2BodyMoveEvent))
     , sensorEvent(zfobjAlloc(P2SensorEvent))
     , contactEvent(zfobjAlloc(P2ContactEvent))
@@ -828,6 +813,9 @@ void P2ShapeCapsule::p2impl_shapeCreate(ZF_IN P2Body *ownerBody, ZF_IN zffloat u
 }
 
 ZFOBJECT_REGISTER(P2ShapePolygon)
+ZFMETHOD_DEFINE_0(P2ShapePolygon, zfindex, p2_maxVertex) {
+    return B2_MAX_POLYGON_VERTICES;
+}
 ZFMETHOD_DEFINE_4(P2ShapePolygon, void, p2_polygon
         , ZFMP_IN(const ZFCoreArray<ZFUIPoint> &, points)
         , ZFMP_IN_OPT(const ZFUIPoint &, position, ZFUIPointZero())
@@ -1803,7 +1791,7 @@ ZFMETHOD_DEFINE_1(P2Body, void, p2_shape
         ) {
     ZFCoreAssert(shape != zfnull && shape->p2_ownerBody() == zfnull);
     this->p2_shapeList()->add(shape);
-    _ZFP_P2Body_d->bodySize.width = -1;
+    ZFBitSet(_ZFP_P2Body_d->stateFlag, _ZFP_P2BodyPrivate::stateFlag_bodyPosUpdateRequested);
     if(B2_IS_NON_NULL(_ZFP_P2Body_d->implBodyId)) {
         _ZFP_P2ShapePrivate::shapeCreate(this, shape, this->p2_ownerUnit()->p2_unitScale());
         _ZFP_P2BodyImplMassUpdateRequest(this);
@@ -1828,7 +1816,7 @@ ZFMETHOD_DEFINE_1(P2Body, zfautoT<P2Shape>, p2_shapeRemoveAt
         , ZFMP_IN(zfindex, index)
         ) {
     zfautoT<P2Shape> item = this->p2_shapeList()->removeAndGet(index);
-    _ZFP_P2Body_d->bodySize.width = -1;
+    ZFBitSet(_ZFP_P2Body_d->stateFlag, _ZFP_P2BodyPrivate::stateFlag_bodyPosUpdateRequested);
     _ZFP_P2Body_shapeDetach(this, item);
     return item;
 }
@@ -1840,14 +1828,14 @@ ZFMETHOD_DEFINE_1(P2Body, zfautoT<P2Shape>, p2_shapeRemove
         return zfnull;
     }
     zfautoT<P2Shape> item = this->p2_shapeList()->removeAndGet(index);
-    _ZFP_P2Body_d->bodySize.width = -1;
+    ZFBitSet(_ZFP_P2Body_d->stateFlag, _ZFP_P2BodyPrivate::stateFlag_bodyPosUpdateRequested);
     _ZFP_P2Body_shapeDetach(this, item);
     return item;
 }
 ZFMETHOD_DEFINE_0(P2Body, void, p2_shapeRemoveAll) {
     ZFArray *l = this->p2_shapeList();
     if(!l->isEmpty()) {
-        _ZFP_P2Body_d->bodySize.width = -1;
+        ZFBitSet(_ZFP_P2Body_d->stateFlag, _ZFP_P2BodyPrivate::stateFlag_bodyPosUpdateRequested);
         for(zfindex i = 0; i < l->count(); ++i) {
             P2Shape *item = l->get(i);
             _ZFP_P2Body_shapeDetach(this, item);
@@ -1948,6 +1936,7 @@ ZFPROPERTY_ON_UPDATE_DEFINE(P2Body, zffloat, p2_gravityScale) {
 ZFPROPERTY_ON_UPDATE_DEFINE(P2Body, ZFUIPoint, p2_position) {
     if(B2_IS_NON_NULL(_ZFP_P2Body_d->implBodyId)) {
         b2Body_SetTransform(_ZFP_P2Body_d->implBodyId, b2Vec2FromZF(propertyValue), b2Body_GetTransform(_ZFP_P2Body_d->implBodyId).q);
+        this->p2_ownerWorld()->_ZFP_P2World_d->pendingBodyMove[this] = zftrue;
     }
 }
 ZFPROPERTY_ON_UPDATE_DEFINE(P2Body, ZFUIPoint, p2_positionVelocity) {
@@ -1965,6 +1954,7 @@ ZFPROPERTY_ON_UPDATE_DEFINE(P2Body, zffloat, p2_rotation) {
 
     if(B2_IS_NON_NULL(_ZFP_P2Body_d->implBodyId)) {
         b2Body_SetTransform(_ZFP_P2Body_d->implBodyId, b2Body_GetTransform(_ZFP_P2Body_d->implBodyId).p, b2RotFromZF(propertyValue));
+        this->p2_ownerWorld()->_ZFP_P2World_d->pendingBodyMove[this] = zftrue;
     }
 }
 ZFPROPERTY_ON_UPDATE_DEFINE(P2Body, zffloat, p2_rotationVelocity) {
@@ -1987,24 +1977,16 @@ ZFMETHOD_DEFINE_0(P2Body, ZFUIRect, p2_AABB) {
     }
 }
 ZFMETHOD_DEFINE_0(P2Body, ZFUIRect, p2_AABBLocal) {
-    if(B2_IS_NON_NULL(_ZFP_P2Body_d->implBodyId)) {
-        return _ZFP_P2Body_d->bodyAABBLocal();
-    }
-    else {
-        return ZFUIRectZero();
-    }
-}
-ZFMETHOD_DEFINE_0(P2Body, ZFUISize, p2_bodySize) {
-    if(_ZFP_P2Body_d->bodySize.width == -1) {
+    if(ZFBitTest(_ZFP_P2Body_d->stateFlag, _ZFP_P2BodyPrivate::stateFlag_bodyPosUpdateRequested)) {
         _ZFP_P2Body_d->bodyPosUpdate();
-        return _ZFP_P2Body_d->bodySize;
+        return _ZFP_P2Body_d->bodyAABBLocal;
     }
     else {
-        return _ZFP_P2Body_d->bodySize;
+        return _ZFP_P2Body_d->bodyAABBLocal;
     }
 }
 ZFMETHOD_DEFINE_0(P2Body, ZFUIPoint, p2_centerOfMass) {
-    if(_ZFP_P2Body_d->bodySize.width == -1) {
+    if(ZFBitTest(_ZFP_P2Body_d->stateFlag, _ZFP_P2BodyPrivate::stateFlag_bodyPosUpdateRequested)) {
         _ZFP_P2Body_d->bodyPosUpdate();
         return _ZFP_P2Body_d->centerOfMass;
     }
@@ -2179,8 +2161,10 @@ ZFPROPERTY_ON_UPDATE_DEFINE(P2Unit, zffloat, p2_unitScale) {
     }
     if(propertyValue != propertyValueOld) {
         if(this->p2_body()) {
-            ZFBitSet(this->p2_body()->_ZFP_P2Body_d->stateFlag, _ZFP_P2BodyPrivate::stateFlag_massUpdateRequested);
-            this->p2_body()->_ZFP_P2Body_d->bodySize.width = -1;
+            ZFBitSet(this->p2_body()->_ZFP_P2Body_d->stateFlag, 0
+                    | _ZFP_P2BodyPrivate::stateFlag_massUpdateRequested
+                    | _ZFP_P2BodyPrivate::stateFlag_bodyPosUpdateRequested
+                    );
             if(_ZFP_P2Unit_d->ownerWorld) {
                 _ZFP_P2Unit_d->ownerWorld->_ZFP_P2World_d->pendingBody[this->p2_body()] = zftrue;
             }
@@ -2188,8 +2172,10 @@ ZFPROPERTY_ON_UPDATE_DEFINE(P2Unit, zffloat, p2_unitScale) {
         ZFArray *partList = this->p2_partList();
         for(zfindex i = partList->count() - 1; i != zfindexMax(); --i) {
             P2Body *part = partList->get(i);
-            ZFBitSet(part->_ZFP_P2Body_d->stateFlag, _ZFP_P2BodyPrivate::stateFlag_massUpdateRequested);
-            part->_ZFP_P2Body_d->bodySize.width = -1;
+            ZFBitSet(part->_ZFP_P2Body_d->stateFlag, 0
+                    | _ZFP_P2BodyPrivate::stateFlag_massUpdateRequested
+                    | _ZFP_P2BodyPrivate::stateFlag_bodyPosUpdateRequested
+                    );
             if(_ZFP_P2Unit_d->ownerWorld) {
                 _ZFP_P2Unit_d->ownerWorld->_ZFP_P2World_d->pendingBody[part] = zftrue;
             }
@@ -2869,6 +2855,7 @@ void P2World::objectOnDeallocPrepare(void) {
                     }
                 }
                 body->_ZFP_P2Body_d->implBodyId = b2_nullBodyId;
+                ZFBitSet(body->_ZFP_P2Body_d->stateFlag, _ZFP_P2BodyPrivate::stateFlag_bodyPosUpdateRequested);
                 body->_ZFP_P2Body_d->ownerUnit = zfnull;
                 body->_ZFP_P2Body_d->bodyRefJointList->removeAll();
             }
@@ -2911,6 +2898,7 @@ void P2World::objectOnDeallocPrepare(void) {
 
         _ZFP_P2World_d->pendingBody.clear();
         _ZFP_P2World_d->pendingJoint.clear();
+        _ZFP_P2World_d->pendingBodyMove.clear();
     }
 
     zfsuper::objectOnDeallocPrepare();
@@ -2983,6 +2971,7 @@ static void _ZFP_P2BodyDetach(ZF_IN P2Body *body, ZF_IN_OPT zfbool pendingBodyUp
     if(ownerWorld) {
         if(pendingBodyUpdate) {
             ownerWorld->_ZFP_P2World_d->pendingBody.erase(body);
+            ownerWorld->_ZFP_P2World_d->pendingBodyMove.erase(body);
         }
         if(B2_IS_NON_NULL(body->_ZFP_P2Body_d->implBodyId)) {
             ownerWorld->p2impl->bodyRemove(ownerWorld, body);
@@ -3026,6 +3015,7 @@ static void _ZFP_P2BodyDetach(ZF_IN P2Body *body, ZF_IN_OPT zfbool pendingBodyUp
 
             b2DestroyBody(body->_ZFP_P2Body_d->implBodyId);
             body->_ZFP_P2Body_d->implBodyId = b2_nullBodyId;
+            ZFBitSet(body->_ZFP_P2Body_d->stateFlag, _ZFP_P2BodyPrivate::stateFlag_bodyPosUpdateRequested);
         }
     }
     body->_ZFP_P2Body_d->ownerUnit = zfnull;
@@ -3133,6 +3123,7 @@ static void _ZFP_P2BodyImplCreate(ZF_IN P2World *world, ZF_IN P2Body *body) {
     implBodyDef.angularVelocity = b2AngularVelocityFromZF(body->p2_rotationVelocity());
     implBodyDef.angularDamping = body->p2_rotationDamping();
     body->_ZFP_P2Body_d->implBodyId = b2CreateBody(world->_ZFP_P2World_d->implWorldId, &implBodyDef);
+    ZFBitSet(body->_ZFP_P2Body_d->stateFlag, _ZFP_P2BodyPrivate::stateFlag_bodyPosUpdateRequested);
 
     zffloat unitScale = body->_ZFP_P2Body_d->ownerUnit->p2_unitScale();
     ZFArray *shapeList = body->p2_shapeList();
@@ -3248,6 +3239,26 @@ static void _ZFP_P2WorldImplUpdate_events(ZF_IN P2World *world) {
                 dst.p2_position = b2Vec2ToZF(src.transform.p);
                 dst.p2_rotation = b2RotToZF(src.transform.q);
             }
+        }
+        if(!world->_ZFP_P2World_d->pendingBodyMove.empty()) {
+            ZFCoreArray<P2BodyMoveEventData> &eventList = world->_ZFP_P2World_d->bodyMoveEvent->p2_moveEventList;
+            for(zfimplhashmap<P2Body *, zfbool>::iterator it = world->_ZFP_P2World_d->pendingBodyMove.begin(); it != world->_ZFP_P2World_d->pendingBodyMove.end(); ++it) {
+                P2Body *body = zfnull;
+                for(zfindex i = eventList.count() - 1; i != zfindexMax(); --i) {
+                    if(it->first == eventList[i].p2_body) {
+                        body = it->first;
+                        break;
+                    }
+                }
+                if(!body) {
+                    P2BodyMoveEventData dst;
+                    dst.p2_body = it->first;
+                    dst.p2_position = it->first->p2_positionCur();
+                    dst.p2_rotation = it->first->p2_rotationCur();
+                    eventList.add(dst);
+                }
+            }
+            world->_ZFP_P2World_d->pendingBodyMove.clear();
         }
         if(!world->_ZFP_P2World_d->bodyMoveEvent->p2_moveEventList.isEmpty()) {
             world->p2impl->bodyMoveEvent(world, world->_ZFP_P2World_d->bodyMoveEvent);

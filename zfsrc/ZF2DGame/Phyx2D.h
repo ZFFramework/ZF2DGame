@@ -178,7 +178,14 @@ protected:
 zfclass ZFLIB_ZF2DGame P2ShapePolygon : zfextend P2Shape {
     ZFOBJECT_DECLARE(P2ShapePolygon, P2Shape)
 public:
-    /** @brief see #P2World */
+    /** @brief max vertex count of a #P2ShapePolygon */
+    ZFMETHOD_DECLARE_STATIC_0(zfindex, p2_maxVertex)
+    /**
+     * @brief create polygon from points
+     *
+     * points count must not exceeds #p2_maxVertex,
+     * and should ordered with clockwise
+     */
     ZFMETHOD_DECLARE_4(void, p2_polygon
             , ZFMP_IN(const ZFCoreArray<ZFUIPoint> &, points)
             , ZFMP_IN_OPT(const ZFUIPoint &, position, ZFUIPointZero())
@@ -636,20 +643,20 @@ public:
 public:
     /** @brief see #P2World, world AABB, note: calculate each time called, already applied with #P2Unit::p2_unitScale */
     ZFMETHOD_DECLARE_0(ZFUIRect, p2_AABB)
-    /** @brief see #P2World, local AABB, calculate by each shape's #P2Shape::p2_AABBLocal, not applied with #P2Unit::p2_unitScale */
-    ZFMETHOD_DECLARE_0(ZFUIRect, p2_AABBLocal)
     /**
-     * @brief get minimal bounding box size that can holds all child shapes, calculate and cached automatically
+     * @brief see #P2World, local AABB, calculate by each shape's #P2Shape::p2_AABBLocal, not applied with #P2Unit::p2_unitScale
      *
-     * not applied with #P2Unit::p2_unitScale,
-     * origin point ensured at center of the bounding box,
-     * all child shapes can be layouted as their proper position according to the origin point
+     * origin point position would be (0-p2_AABBLocal.x, 0-p2_AABBLocal.y), relative to p2_AABBLocal's left bottom
+     *
+     * note: valid only after added to world
      */
-    ZFMETHOD_DECLARE_0(ZFUISize, p2_bodySize)
+    ZFMETHOD_DECLARE_0(ZFUIRect, p2_AABBLocal)
     /**
      * @brief see #P2World, relative to origin of #p2_AABBLocal, calculate and cached automatically
      *
      * not applied with #P2Unit::p2_unitScale
+     *
+     * note: valid only after added to world
      */
     ZFMETHOD_DECLARE_0(ZFUIPoint, p2_centerOfMass)
 
