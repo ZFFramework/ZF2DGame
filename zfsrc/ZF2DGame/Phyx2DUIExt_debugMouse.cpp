@@ -34,6 +34,13 @@ private:
         _Ctrl_rotate = 1 << 2,
     };
     zfflags _ctrl;
+protected:
+    zfoverride
+    virtual void objectOnInit(void) {
+        zfsuper::objectOnInit();
+        _rotateValueBak = P2_MAX();
+        _ctrl = 0;
+    }
 public:
     void targetPosUpdate(void) {
         if(_target) {
@@ -266,14 +273,14 @@ private:
         _target->p2_sleeping(zffalse);
     }
     void _moveCtrlDetach(void) {
-        if(_moveCtrl) {
-            _moveCtrl->p2_removeFromParent();
-            _moveCtrl = zfnull;
+        if(!_moveHelper) {
+            return;
         }
-        if(_moveHelper) {
-            _moveHelper->p2_removeFromParent();
-            _moveHelper = zfnull;
-        }
+
+        _moveCtrl->p2_removeFromParent();
+        _moveCtrl = zfnull;
+        _moveHelper->p2_removeFromParent();
+        _moveHelper = zfnull;
         P2WorldView *worldView = zfcast(P2WorldView *, _target->p2_ownerWorld());
         if(worldView && worldView->debugMousePositionAlign() > 0) {
             ZFUIPoint t = _target->p2_positionCur();
@@ -313,12 +320,21 @@ private:
             }
         }
         _moveCtrl->p2_position(t);
+        if(_target->p2_type() != v_P2BodyType::e_Dynamic) {
+            _target->p2_position(t);
+        }
     }
 
     void _rotateCtrlAttach(void) {
         _rotateValueBak = _target->p2_rotationCur();
+        if(_rotateValueBak == P2_MAX()) {
+            _rotateValueBak = 0;
+        }
     }
     void _rotateCtrlDetach(void) {
+        if(_rotateValueBak == P2_MAX()) {
+            return;
+        }
         _rotateValueBak = P2_MAX();
         P2WorldView *worldView = zfcast(P2WorldView *, _target->p2_ownerWorld());
         if(worldView && worldView->debugMouseRotationAlign() > 0) {
@@ -331,7 +347,7 @@ private:
         _target->p2_rotationVelocity(0);
     }
     void _rotateCtrlUpdate(ZF_IN zffloat dx, ZF_IN zffloat dy) {
-        if((dx == 0 && dy == 0) || (dx == _dx && dy == _dy)) {
+        if((dx == 0 && dy == 0) || (dx == _dx && dy == _dy) || _rotateValueBak == P2_MAX()) {
             return;
         }
         zffloat ux = -dx, uy = -dy;
