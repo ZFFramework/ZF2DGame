@@ -271,17 +271,17 @@ ZFMETHOD_FUNC_DEFINE_8(void, P2UIRectFromBodyT
         , ZFMP_IN_OPT(const ZFUIPoint &, centerOfMass, ZFUIPointZero())
         ) {
     zffloat r = (zffloat)(rotation * zfm_PI() / 180);
-    zffloat cr = zfm_cos(r);
-    zffloat sr = zfm_sin(r);
-    zffloat x = position.x + centerOfMass.x * cr + centerOfMass.y * sr - centerOfMass.x;
-    zffloat y = position.y - centerOfMass.x * sr + centerOfMass.y * cr - centerOfMass.y;
+    zffloat cr = cos(r);
+    zffloat sr = sin(r);
     zffloat w = aabbLocal.width;
     zffloat h = aabbLocal.height;
     zffloat dx = w / 2 - (centerOfMass.x - aabbLocal.x);
     zffloat dy = h / 2 - (centerOfMass.y - aabbLocal.y);
+    zffloat x = position.x + dx * cr + dy * sr;
+    zffloat y = position.y - dx * sr + dy * cr;
 
-    rect.x = (x + (dx * cr + dy * sr) - w / 2 + worldUIOffset.x) * worldUIScale;
-    rect.y = worldUIHeight + (-(y + (-dx * sr + dy * cr)) - h / 2 - worldUIOffset.y) * worldUIScale;
+    rect.x = (x + worldUIOffset.x - w / 2) * worldUIScale;
+    rect.y = worldUIHeight + (-y - worldUIOffset.y - h / 2) * worldUIScale;
     rect.width = w * worldUIScale;
     rect.height = h * worldUIScale;
 }
