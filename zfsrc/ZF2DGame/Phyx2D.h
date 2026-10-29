@@ -183,8 +183,10 @@ public:
     /**
      * @brief create polygon from points
      *
-     * points count must not exceeds #p2_maxVertex,
-     * and should ordered with clockwise
+     * points must:
+     * -  count must not exceeds #p2_maxVertex
+     * -  ordered with clockwise
+     * -  convex hull
      */
     ZFMETHOD_DECLARE_4(void, p2_polygon
             , ZFMP_IN(const ZFCoreArray<ZFUIPoint> &, points)

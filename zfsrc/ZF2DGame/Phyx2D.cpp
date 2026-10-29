@@ -851,13 +851,18 @@ static b2Polygon _ZFP_P2ShapePolygon_implDef(ZF_IN P2ShapePolygon *shape, ZF_IN 
     if(unitScale != 1) {
         ZFCoreArray<ZFUIPoint> points;
         points.resize(shape->p2_polygon_points().count());
-        for(zfindex i = 0; i < points.count(); ++i) {
+        for(zfindex i = points.count() - 1; i != zfindexMax(); --i) {
             points[i] = ZFUIPointApplyScale(shape->p2_polygon_points()[i], unitScale);
         }
         implHull = b2ComputeHull((const b2Vec2 *)(points.arrayBuf()), (int)points.count());
     }
     else {
-        implHull = b2ComputeHull((const b2Vec2 *)(shape->p2_polygon_points().arrayBuf()), (int)shape->p2_polygon_points().count());
+        ZFCoreArray<ZFUIPoint> points;
+        points.resize(shape->p2_polygon_points().count());
+        for(zfindex i = points.count() - 1; i != zfindexMax(); --i) {
+            points[i] = shape->p2_polygon_points()[i];
+        }
+        implHull = b2ComputeHull((const b2Vec2 *)(points.arrayBuf()), (int)points.count());
     }
     ZFCoreAssertWithMessageTrim(implHull.count > 0
             , "invalid polygon points, shape: %s"

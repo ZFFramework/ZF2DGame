@@ -63,6 +63,35 @@ private:
         return ret;
     }
 
+    static zfbool _isConvex(ZF_IN const zfstlvector<_Point> &polygon) {
+        zfstlsize n = polygon.size();
+        if(n < 3) {
+            return zffalse;
+        }
+        zfbool hasPositive = zffalse;
+        zfbool hasNegative = zffalse;
+        for(zfstlsize i = 0; i < n; ++i) {
+            const _Point &prev = polygon[(i + n - 1) % n];
+            const _Point &cur = polygon[i];
+            const _Point &next = polygon[(i + 1) % n];
+            zfint dx1 = cur.first - prev.first;
+            zfint dy1 = cur.second - prev.second;
+            zfint dx2 = next.first - cur.first;
+            zfint dy2 = next.second - cur.second;
+            zfint cross = dx1 * dy2 - dy1 * dx2;
+            if(cross > 0) {
+                hasPositive = zftrue;
+            }
+            else if(cross < 0) {
+                hasNegative = zftrue;
+            }
+            if(hasPositive && hasNegative) {
+                return zffalse;
+            }
+        }
+        return zftrue;
+    }
+
     static zfbool _addEdge(ZF_IN_OUT zfstlmap<_Point, _Point> &edges, ZF_IN const _Point &from, ZF_IN const _Point &to) {
         if(edges.find(from) != edges.end()) {
             return zffalse;
@@ -160,7 +189,7 @@ private:
                         _uniqueAdd(combined, toAdd[t]);
                     }
                     zfstlvector<zfstlvector<_Point> > loops = _extractLoops(combined);
-                    if (loops.size() == 1 && loops[0].size() <= (zfstlsize)maxVertex) {
+                    if (loops.size() == 1 && loops[0].size() <= (zfstlsize)maxVertex && _isConvex(loops[0])) {
                         blocks[i].swap(combined);
                         blocks.erase(blocks.begin() + j);
                         hasMerge = zftrue;
@@ -175,7 +204,7 @@ private:
         for(zfstlsize i = 0; i < blocks.size(); ++i) {
             const zfstlvector<_Point> &block = blocks[i];
             zfstlvector<zfstlvector<_Point> > loops = _extractLoops(block);
-            if(loops.size() == 1 && loops[0].size() <= (zfstlsize)maxVertex) {
+            if(loops.size() == 1 && loops[0].size() <= (zfstlsize)maxVertex && _isConvex(loops[0])) {
                 ZFCoreArray<zfuint> polygon;
                 const zfstlvector<_Point> &points = loops[0];
                 for(zfstlsize t = 0; t < points.size(); ++t) {
